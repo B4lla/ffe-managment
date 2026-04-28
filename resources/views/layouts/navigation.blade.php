@@ -21,6 +21,12 @@
                     <x-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
                         {{ __('Empresas') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                        {{ __('Convenios') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                        {{ __('Tareas pendientes') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -81,6 +87,12 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
                 {{ __('Empresas') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                {{ __('Convenios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                {{ __('Tareas pendientes') }}
             </x-responsive-nav-link>
         </div>
 

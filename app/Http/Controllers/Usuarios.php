@@ -117,24 +117,10 @@ class Usuarios extends Controller
 			return false;
 		}
 
-		if ($user->rol_id === 1) {
+		if ($this->userHasRole($user, 'Administrador')) {
 			return true;
 		}
 
-		if (method_exists($user, 'hasRole') && $user->hasRole('Administrador')) {
-			return true;
-		}
-
-		if ($user->can('usuarios.gestionar')) {
-			return true;
-		}
-
-		if (! $user->relationLoaded('rol')) {
-			$user->load('rol');
-		}
-
-		$roleName = strtolower(trim((string) optional($user->rol)->nombre));
-
-		return str_contains($roleName, 'administrador') || str_contains($roleName, 'admin');
+		return false;
 	}
 }

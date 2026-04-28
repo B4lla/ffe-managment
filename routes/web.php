@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Usuarios;
+use App\Http\Controllers\Convenios;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -25,10 +26,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios', [Usuarios::class, 'index'])
         ->middleware('verified')
         ->name('usuarios.index');
+
+
+    Route::get('/convenios', [Convenios::class, 'index'])
+        ->middleware('verified')
+        ->name('convenios.index');
+
+    Route::get('/convenios/create', [Convenios::class, 'create'])
+        ->middleware('verified')
+        ->name('convenios.create');
+    Route::post('/convenios', [Convenios::class, 'store'])
+        ->middleware('verified')
+        ->name('convenios.store');
 });
 
 
 
-require_once __DIR__.'/convenios.php';
+require_once __DIR__.'/Convenios.php';
 require_once __DIR__.'/empresas.php';
 require_once __DIR__.'/auth.php';
+require_once __DIR__.'/tareas_pendientes.php';

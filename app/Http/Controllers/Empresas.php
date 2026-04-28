@@ -100,24 +100,10 @@ class Empresas extends Controller
 			return false;
 		}
 
-		if ($user->rol_id === 1) {
+		if ($this->userHasRole($user, ['Administrador', 'Coordinador FFE', 'Profesor tutor', 'Secretaria'])) {
 			return true;
 		}
 
-		if (method_exists($user, 'hasRole') && $user->hasRole('Administrador')) {
-			return true;
-		}
-
-		if ($user->can('usuarios.gestionar') || $user->can('convenios.ver-depto') || $user->can('convenios.validar')) {
-			return true;
-		}
-
-		if (! $user->relationLoaded('rol')) {
-			$user->load('rol');
-		}
-
-		$roleName = strtolower(trim((string) optional($user->rol)->nombre));
-
-		return in_array($roleName, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria'], true);
+		return false;
 	}
 }

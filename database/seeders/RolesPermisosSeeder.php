@@ -4,8 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use App\Models\Rol;
 
 
 class RolesPermisosSeeder extends Seeder
@@ -15,62 +14,21 @@ class RolesPermisosSeeder extends Seeder
      */
     public function run(): void
     {
-        $permissions = [
-            'usuarios.gestionar',      // Admin
-            'convenios.generar',       // Secretaría
-            'convenios.firmar',        // Dirección
-            'convenios.validar',       // Coordinador / Tutor
-            'convenios.ver-todos',     // Admin / Dirección
-            'convenios.ver-depto',     // Coordinador
-            'convenios.ver-propios',   // Tutor / Empresa
-            'convenios.consultar',     // Profesor
+        $roles = [
+            ['id' => 1, 'nombre' => 'Administrador', 'descripcion' => 'Gestion total de la aplicacion'],
+            ['id' => 2, 'nombre' => 'Direccion', 'descripcion' => 'Firma convenios por parte del centro'],
+            ['id' => 3, 'nombre' => 'Coordinador FFE', 'descripcion' => 'Gestion de convenios por departamento'],
+            ['id' => 4, 'nombre' => 'Profesor tutor', 'descripcion' => 'Gestion y validacion de convenios asignados'],
+            ['id' => 5, 'nombre' => 'Profesor', 'descripcion' => 'Consulta de convenios sin modificacion'],
+            ['id' => 6, 'nombre' => 'Secretaria', 'descripcion' => 'Generacion y carga documental de convenios'],
+            ['id' => 7, 'nombre' => 'Empresa externa', 'descripcion' => 'Acceso limitado a sus propios convenios y datos'],
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+        foreach ($roles as $role) {
+            Rol::updateOrCreate(
+                ['id' => $role['id']],
+                ['nombre' => $role['nombre'], 'descripcion' => $role['descripcion']]
+            );
         }
-
-        // 2. CREAR ROLES Y ASIGNAR PERMISOS
-        
-        // Administrador
-        Role::create(['name' => 'Administrador'])->givePermissionTo(Permission::all());
-
-        // Dirección
-        Role::create(['name' => 'Direccion'])->givePermissionTo([
-            'convenios.firmar', 
-            'convenios.ver-todos',
-            'convenios.consultar'
-        ]);
-
-        // Secretaría
-        Role::create(['name' => 'Secretaria'])->givePermissionTo([
-            'convenios.generar', 
-            'convenios.ver-todos',
-            'convenios.consultar'
-        ]);
-
-        // Coordinador FFE
-        Role::create(['name' => 'Coordinador'])->givePermissionTo([
-            'convenios.validar', 
-            'convenios.ver-depto',
-            'convenios.consultar'
-        ]);
-
-        // Profesor Tutor
-        Role::create(['name' => 'Tutor'])->givePermissionTo([
-            'convenios.validar', 
-            'convenios.ver-propios',
-            'convenios.consultar'
-        ]);
-
-        // Profesor
-        Role::create(['name' => 'Profesor'])->givePermissionTo([
-            'convenios.consultar'
-        ]);
-
-        // Empresa Externa
-        Role::create(['name' => 'Empresa'])->givePermissionTo([
-            'convenios.ver-propios'
-        ]);
     }
 }
