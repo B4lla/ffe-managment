@@ -42,10 +42,10 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Departamento</label>
-                                <select id="departamento_select" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <select id="departamento_select" name="departamento_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                                     <option value="">Selecciona departamento</option>
                                     @foreach($departamentos ?? [] as $departamento)
-                                        <option value="{{ $departamento->id }}">{{ $departamento->nombre }}</option>
+                                        <option value="{{ $departamento->id }}" @selected(old('departamento_id') == $departamento->id)>{{ $departamento->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -88,6 +88,26 @@
                                 <input name="empresa_actividad" type="text" value="{{ old('empresa_actividad') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
                             </div>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Categoría</label>
+                                <select name="categoria" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="">Sin categoría</option>
+                                        @foreach($categorias ?? [] as $value => $label)
+                                            <option value="{{ $value }}" @selected(old('categoria') == $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Tipo</label>
+                                <select name="tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                    <option value="">Sin tipo</option>
+                                        @foreach($tipos ?? [] as $value => $label)
+                                            <option value="{{ $value }}" @selected(old('tipo') == $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -114,8 +134,7 @@
 
                     <div>
                         <h3 class="text-lg font-medium">Direcciones Centro de Trabajo</h3>
-                        <div id="direcciones_container" class="space-y-4 mt-3">
-                        </div>
+                        <div id="direcciones_container" class="space-y-4 mt-3"></div>
                         <div class="mt-3">
                             <button type="button" id="add_direccion" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Añadir dirección</button>
                         </div>
@@ -168,6 +187,35 @@
                             <button type="button" id="add_tutor" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Añadir tutor</button>
                         </div>
                         <p class="text-sm text-gray-500 mt-2">Horario: seleccione uno o varios horarios por defecto (16 opciones disponibles).</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-medium">Relación académica y observaciones</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Ciclos relacionados</label>
+                                <select name="ciclo_ids[]" multiple class="mt-1 block w-full border-gray-300 rounded-md shadow-sm min-h-40">
+                                    @foreach($ciclos ?? [] as $ciclo)
+                                        <option value="{{ $ciclo->id }}">{{ $ciclo->nombre }}{{ $ciclo->grado ? ' - '.$ciclo->grado : '' }}{{ $ciclo->departamento_nombre ? ' (' . $ciclo->departamento_nombre . ')' : '' }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Mantén pulsado Ctrl/Command para seleccionar varios.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Observaciones</label>
+                                <textarea name="observaciones" rows="6" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">{{ old('observaciones') }}</textarea>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fecha de firma</label>
+                                <input name="fecha_firma" type="date" value="{{ old('fecha_firma') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Estado inicial</label>
+                                <input type="text" value="borrador" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-3">
@@ -232,7 +280,7 @@
     </template>
 
     <script>
-        const tutoresByDept = @json($tutoresByDept ?? []);
+        const tutoresByDept = <?php echo json_encode($tutoresByDept ?? []); ?>;
 
         document.addEventListener('DOMContentLoaded', function () {
             const depSelect = document.getElementById('departamento_select');
@@ -269,7 +317,6 @@
                 }
             });
 
-            // Tutores repeater
             const addTutor = document.getElementById('add_tutor');
             const tutoresContainer = document.getElementById('tutores_container');
             const tutorTpl = document.getElementById('tutor_template');

@@ -25,9 +25,9 @@
 						<label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
 						<select id="categoria" name="categoria" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
 							<option value="">Todas</option>
-							@foreach($categorias as $categoria)
-								<option value="{{ $categoria }}" @selected(($filtros['categoria'] ?? '') == $categoria)>
-									{{ $categoria }}
+							@foreach($categorias as $value => $label)
+								<option value="{{ $value }}" @selected(($filtros['categoria'] ?? '') == $value)>
+									{{ $label }}
 								</option>
 							@endforeach
 						</select>
@@ -37,9 +37,9 @@
 						<label for="tipo" class="block text-sm font-medium text-gray-700">Tipo</label>
 						<select id="tipo" name="tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
 							<option value="">Todos</option>
-							@foreach($tipos as $tipo)
-								<option value="{{ $tipo }}" @selected(($filtros['tipo'] ?? '') == $tipo)>
-									{{ $tipo }}
+							@foreach($tipos as $value => $label)
+								<option value="{{ $value }}" @selected(($filtros['tipo'] ?? '') == $value)>
+									{{ $label }}
 								</option>
 							@endforeach
 						</select>
@@ -81,6 +81,7 @@
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">DNI/CIF</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Categoria</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
+								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contacto familia</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefono</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicacion</th>
@@ -92,8 +93,20 @@
 								<tr>
 									<td class="px-4 py-3 text-sm text-gray-900">{{ $empresa->nombre_razon_social }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->dni_cif }}</td>
-									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->categoria ?? '-' }}</td>
-									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->tipo ?? '-' }}</td>
+										<td class="px-4 py-3 text-sm text-gray-700">{{ \App\Models\Empresa::categoriaLabel($empresa->categoria) }}</td>
+										<td class="px-4 py-3 text-sm text-gray-700">
+											<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ \App\Models\Empresa::tipoBadgeClass($empresa->tipo) }}">
+												{{ \App\Models\Empresa::tipoLabel($empresa->tipo) }}
+											</span>
+										</td>
+										<td class="px-4 py-3 text-sm text-gray-700">
+											@if($empresa->ultimoContactoFamilia)
+												<div class="font-medium">{{ $empresa->ultimoContactoFamilia->departamento->nombre ?? '-' }}</div>
+												<div class="text-xs text-gray-500">{{ $empresa->ultimoContactoFamilia->profesor->nombre ?? 'Sin profesor' }}</div>
+											@else
+												-
+											@endif
+										</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->email ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->telefono1 ?? $empresa->telefono2 ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ trim(($empresa->municipio ?? '').' '.($empresa->provincia ?? '')) ?: '-' }}</td>
@@ -101,7 +114,7 @@
 								</tr>
 							@empty
 								<tr>
-									<td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500">
+									<td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500">
 										No hay empresas para los filtros seleccionados.
 									</td>
 								</tr>

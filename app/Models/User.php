@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'dni_cif',
         'departamento_id',
+        'empresa_id',
         'rol_id',
         'foto_url',
         'activo',
@@ -45,6 +46,11 @@ class User extends Authenticatable
     public function departamento()
     {
         return $this->belongsTo(Departamento::class, 'departamento_id');
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
     public function rol()
@@ -95,7 +101,10 @@ class User extends Authenticatable
 
     public function setEmailAttribute($value)
     {
-        $this->attributes['email'] = $value === null ? null : Crypt::encryptString($value);
+        $normalized = $value === null ? null : strtolower(trim((string) $value));
+
+        $this->attributes['email'] = $normalized === null ? null : Crypt::encryptString($normalized);
+        $this->attributes['email_hash'] = $normalized === null ? null : hash('sha256', $normalized);
     }
 
     public function getDniCifAttribute($value)

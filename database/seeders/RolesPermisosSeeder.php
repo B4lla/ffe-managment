@@ -9,9 +9,6 @@ use App\Models\Rol;
 
 class RolesPermisosSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $roles = [

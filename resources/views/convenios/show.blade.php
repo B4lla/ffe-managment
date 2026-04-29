@@ -12,37 +12,40 @@
                     $user = auth()->user();
                     $role = strtolower(trim((string) optional($user?->rol)->nombre ?? ''));
                     $isAssignedTutor = $user && isset($convenio->profesor_id) && $user->id === $convenio->profesor_id;
+                    $canManageConvenio = in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria', 'direccion', 'empresa'], true);
                 @endphp
 
                 <div class="mb-4 flex gap-2 flex-wrap">
-                    @if(in_array($role, ['administrador', 'coordinador', 'tutor', 'secretaria'], true))
-                        <a href="{{ route('convenios.insertar') }}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-black rounded-md">Insertar convenio</a>
+                    @if($canManageConvenio && in_array($convenio->estado, ['pendiente_datos', 'nuevo_solicitado'], true) && in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor'], true))
+                        <a href="{{ route('convenios.datos', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-green-600 text-black rounded-md">Meter datos iniciales</a>
                     @endif
 
-                    @if(in_array($role, ['empresa', 'coordinador', 'tutor'], true) && ($convenio->estado === 'pendiente_datos'))
-                        <a href="{{ route('convenios.datos', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-green-600 text-white rounded-md">Meter datos iniciales</a>
+                    @if(in_array($role, ['secretaria', 'administrador'], true) && in_array($convenio->estado, ['pendiente_secretaria', 'nuevo_solicitado'], true))
+                        <a href="{{ route('convenios.generar_pdf', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-yellow-600 text-black rounded-md">Generar/Subir PDF inicial</a>
                     @endif
 
-                    @if(in_array($role, ['secretaria', 'administrador'], true) && ($convenio->estado === 'pendiente_secretaria'))
-                        <a href="{{ route('convenios.generar_pdf', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-yellow-600 text-white rounded-md">Generar/Subir PDF inicial</a>
+                    @if($role === 'empresa externa' && in_array($convenio->estado, ['pendiente_firma_empresa', 'firmado_centro'], true))
+                        <a href="{{ route('convenios.firmar_empresa', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-indigo-600 text-black rounded-md">Descargar y firmar (Empresa)</a>
                     @endif
 
-                    @if($role === 'empresa' && ($convenio->estado === 'pendiente_firma_empresa'))
-                        <a href="{{ route('convenios.firmar_empresa', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-indigo-600 text-white rounded-md">Descargar y firmar (Empresa)</a>
+                    @if($isAssignedTutor && in_array($convenio->estado, ['pendiente_validacion_tutor', 'firmado_empresa'], true))
+                        <a href="{{ route('convenios.validar_firma', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-purple-600 text-black rounded-md">Validar firma de empresa</a>
                     @endif
 
-                    @if($isAssignedTutor && ($convenio->estado === 'pendiente_validacion_tutor'))
-                        <a href="{{ route('convenios.validar_firma', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-purple-600 text-white rounded-md">Validar firma de empresa</a>
+                    @if($role === 'direccion' && in_array($convenio->estado, ['pendiente_firma_direccion', 'validado_tutor'], true))
+                        <a href="{{ route('convenios.firmar_centro', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-red-600 text-black rounded-md">Firmar por el centro</a>
                     @endif
 
-                    @if($role === 'direccion' && ($convenio->estado === 'pendiente_firma_direccion'))
-                        <a href="{{ route('convenios.firmar_centro', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded-md">Firmar por el centro</a>
-                    @endif
-
-                    @if($role === 'empresa' && ($convenio->estado === 'en_vigor'))
-                        <a href="{{ route('convenios.descargar_firmado', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-white rounded-md">Descargar convenio firmado</a>
+                    @if($role === 'empresa externa' && ($convenio->estado === 'en_vigor'))
+                        <a href="{{ route('convenios.descargar_firmado', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-black rounded-md">Descargar convenio firmado</a>
                     @endif
                 </div>
+
+                @if(! $canManageConvenio)
+                    <div class="mb-4 rounded-md bg-gray-50 p-3 text-sm text-gray-600">
+                        No hay acciones disponibles para tu rol en este convenio.
+                    </div>
+                @endif
 
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-lg font-medium text-gray-900">Detalle del convenio</h3>

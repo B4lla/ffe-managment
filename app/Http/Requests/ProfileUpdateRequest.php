@@ -5,7 +5,6 @@ namespace App\Http\Requests;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
@@ -17,14 +16,26 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'nombre' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
                 'string',
                 'lowercase',
                 'email',
                 'max:255',
-                Rule::unique(User::class)->ignore($this->user()->id),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $emailHash = hash('sha256', strtolower(trim((string) $value)));
+
+                    $query = User::query()->where('email_hash', $emailHash);
+
+                    if ($this->user()) {
+                        $query->whereKeyNot($this->user()->id);
+                    }
+
+                    if ($query->exists()) {
+                        $fail('The email has already been taken.');
+                    }
+                },
             ],
         ];
     }

@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Departamento;
 use App\Models\Empresa;
+use App\Models\EmpresaContactoFamilia;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,7 +13,10 @@ class Empresas extends Controller
 {
 	public function index(Request $request)
 	{
-		$query = Empresa::query();
+		$user = Auth::user();
+		$role = $this->currentRoleName($user);
+
+		$query = Empresa::with(['ultimoContactoFamilia.departamento', 'ultimoContactoFamilia.profesor']);
 
 		if ($request->filled('categoria')) {
 			$query->where('categoria', (string) $request->input('categoria'));
@@ -24,13 +30,14 @@ class Empresas extends Controller
 			$term = trim((string) $request->input('q'));
 			$query->where(function ($subQuery) use ($term) {
 				$subQuery->where('nombre_razon_social', 'like', "%{$term}%")
-					->orWhere('dni_cif', 'like', "%{$term}%")
-					->orWhere('email', 'like', "%{$term}%")
-					->orWhere('telefono1', 'like', "%{$term}%")
-					->orWhere('telefono2', 'like', "%{$term}%")
-					->orWhere('municipio', 'like', "%{$term}%")
-					->orWhere('provincia', 'like', "%{$term}%");
+					->orWhere('actividad', 'like', "%{$term}%")
+					->orWhere('categoria', 'like', "%{$term}%")
+					->orWhere('tipo', 'like', "%{$term}%");
 			});
+		}
+
+		if ($role === 'empresa externa' && $user?->empresa_id) {
+			$query->where('id', $user->empresa_id);
 		}
 
 		$empresas = $query
@@ -38,19 +45,8 @@ class Empresas extends Controller
 			->paginate(15)
 			->withQueryString();
 
-		$categorias = Empresa::query()
-			->whereNotNull('categoria')
-			->where('categoria', '!=', '')
-			->distinct()
-			->orderBy('categoria')
-			->pluck('categoria');
-
-		$tipos = Empresa::query()
-			->whereNotNull('tipo')
-			->where('tipo', '!=', '')
-			->distinct()
-			->orderBy('tipo')
-			->pluck('tipo');
+		$categorias = Empresa::categoriaOptions();
+		$tipos = Empresa::tipoOptions();
 
 		return view('empresas', [
 			'empresas' => $empresas,
@@ -65,7 +61,18 @@ class Empresas extends Controller
 	{
 		abort_unless($this->canCreateCompanies(Auth::user()), 403);
 
-		return view('empresas.create');
+		$departamentos = Departamento::orderBy('nombre')->get();
+		$profesores = User::query()
+			->whereIn('rol_id', [3, 4])
+			->orderBy('nombre')
+			->get(['id', 'nombre', 'departamento_id']);
+
+		return view('empresas.create', [
+			'categorias' => Empresa::categoriaOptions(),
+			'tipos' => Empresa::tipoOptions(),
+			'departamentos' => $departamentos,
+			'profesores' => $profesores,
+		]);
 	}
 
 	public function store(Request $request)
@@ -76,8 +83,8 @@ class Empresas extends Controller
 			'nombre_razon_social' => ['required', 'string', 'max:300'],
 			'dni_cif' => ['required', 'string', 'max:20', 'unique:empresas,dni_cif'],
 			'actividad' => ['nullable', 'string'],
-			'categoria' => ['nullable', 'string', 'max:50'],
-			'tipo' => ['nullable', 'string', 'max:50'],
+			'categoria' => ['nullable', 'in:ayuntamiento,colegios_institutos'],
+			'tipo' => ['nullable', 'in:verde,amarilla,roja'],
 			'email' => ['nullable', 'string', 'email', 'max:150'],
 			'telefono1' => ['nullable', 'string', 'max:20'],
 			'telefono2' => ['nullable', 'string', 'max:20'],
@@ -85,9 +92,19 @@ class Empresas extends Controller
 			'municipio' => ['nullable', 'string', 'max:100'],
 			'direccion' => ['nullable', 'string'],
 			'codigo_postal' => ['nullable', 'string', 'max:10'],
+			'departamento_id' => ['nullable', 'exists:departamentos,id'],
+			'profesor_id' => ['nullable', 'exists:usuarios,id'],
 		]);
 
-		Empresa::create($validated);
+		$empresa = Empresa::create($validated);
+
+		if ($request->filled('departamento_id')) {
+			EmpresaContactoFamilia::create([
+				'empresa_id' => $empresa->id,
+				'departamento_id' => $validated['departamento_id'],
+				'profesor_id' => $validated['profesor_id'] ?? null,
+			]);
+		}
 
 		return redirect()
 			->route('empresas.index')
@@ -105,5 +122,18 @@ class Empresas extends Controller
 		}
 
 		return false;
+	}
+
+	private function currentRoleName($user): string
+	{
+		if (! $user) {
+			return '';
+		}
+
+		if (! $user->relationLoaded('rol')) {
+			$user->load('rol');
+		}
+
+		return strtolower(trim((string) optional($user->rol)->nombre));
 	}
 }

@@ -36,12 +36,46 @@
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
 							<label for="categoria" class="block text-sm font-medium text-gray-700">Categoria</label>
-							<input id="categoria" name="categoria" type="text" value="{{ old('categoria') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+							<select id="categoria" name="categoria" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+								<option value="">Selecciona categoría</option>
+								@foreach($categorias ?? [] as $value => $label)
+									<option value="{{ $value }}" @selected(old('categoria') == $value)>{{ $label }}</option>
+								@endforeach
+							</select>
 						</div>
 
 						<div>
 							<label for="tipo" class="block text-sm font-medium text-gray-700">Tipo</label>
-							<input id="tipo" name="tipo" type="text" value="{{ old('tipo') }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+							<select id="tipo" name="tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+								<option value="">Selecciona tipo</option>
+								@foreach($tipos ?? [] as $value => $label)
+									<option value="{{ $value }}" @selected(old('tipo') == $value)>{{ $label }}</option>
+								@endforeach
+							</select>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label for="departamento_id" class="block text-sm font-medium text-gray-700">Contacto por familia - Departamento</label>
+							<select id="departamento_id" name="departamento_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+								<option value="">Sin departamento</option>
+								@foreach($departamentos ?? [] as $departamento)
+									<option value="{{ $departamento->id }}" @selected(old('departamento_id') == $departamento->id)>{{ $departamento->nombre }}</option>
+								@endforeach
+							</select>
+						</div>
+
+						<div>
+							<label for="profesor_id" class="block text-sm font-medium text-gray-700">Contacto por familia - Profesor</label>
+							<select id="profesor_id" name="profesor_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+								<option value="">Sin profesor</option>
+								@foreach($profesores ?? [] as $profesor)
+									<option value="{{ $profesor->id }}" @selected(old('profesor_id') == $profesor->id)>
+										{{ $profesor->nombre }}
+									</option>
+								@endforeach
+							</select>
 						</div>
 					</div>
 

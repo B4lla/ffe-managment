@@ -75,25 +75,4 @@ class DashboardController extends Controller
         };
     }
 
-    private function userHasRole($user, string $roleName): bool
-    {
-        if (! $user || ! $user->relationLoaded('rol')) {
-            $user?->load('rol');
-        }
-
-        $currentRole = strtolower(trim((string) optional($user?->rol)->nombre));
-
-        return $currentRole === strtolower(trim($roleName));
-    }
-
-    private function userHasAnyRole($user, array $roles): bool
-    {
-        foreach ($roles as $role) {
-            if ($this->userHasRole($user, $role)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

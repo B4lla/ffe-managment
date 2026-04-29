@@ -14,6 +14,14 @@ class Convenio extends Model
         'fecha_firma',
         'estado',
         'horario_practicas',
+        'num_convenio',
+        'resp_gestion_nombre',
+        'resp_gestion_telefono',
+        'resp_gestion_email',
+        'resp_ies_nombre',
+        'resp_ies_telefono',
+        'resp_ies_email',
+        'observaciones',
     ];
 
     public function empresa(): BelongsTo

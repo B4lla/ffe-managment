@@ -63,7 +63,7 @@
 
 				<div class="flex justify-end mb-4">
 					@if($puede_crear)
-						<a href="{{ route('convenios.create') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-black border-2 border-black rounded-md hover:bg-indigo-700">
+						<a href="{{ route('convenios.insertar') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-black border-2 border-black rounded-md hover:bg-indigo-700">
 							Crear convenio
 						</a>
 					@endif

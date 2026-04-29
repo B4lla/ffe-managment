@@ -18,25 +18,25 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/usuarios/crear', [Usuarios::class, 'create'])
-        ->middleware('verified')
+        ->middleware(['verified', 'role.access:Administrador'])
         ->name('usuarios.create');
     Route::post('/usuarios', [Usuarios::class, 'store'])
-        ->middleware('verified')
+        ->middleware(['verified', 'role.access:Administrador'])
         ->name('usuarios.store');
     Route::get('/usuarios', [Usuarios::class, 'index'])
-        ->middleware('verified')
+        ->middleware(['verified', 'role.access:Administrador'])
         ->name('usuarios.index');
 
 
     Route::get('/convenios', [Convenios::class, 'index'])
-        ->middleware('verified')
+        ->middleware(['verified', 'convenio.access:viewAny'])
         ->name('convenios.index');
 
     Route::get('/convenios/create', [Convenios::class, 'create'])
-        ->middleware('verified')
+        ->middleware(['verified', 'convenio.access:create'])
         ->name('convenios.create');
     Route::post('/convenios', [Convenios::class, 'store'])
-        ->middleware('verified')
+        ->middleware(['verified', 'convenio.access:store'])
         ->name('convenios.store');
 });
 
