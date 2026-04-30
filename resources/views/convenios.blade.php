@@ -34,6 +34,17 @@
 					</div>
 
 					<div>
+					    <label for="caducidad" class="block text-sm font-medium text-gray-700">Caducan antes de:</label>
+					    <input 
+					        type="date" 
+					        id="caducidad" 
+					        name="caducidad" 
+					        value="{{ $filtros['caducidad'] ?? '' }}"
+					        class="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+					    >
+					</div>
+
+					<div>
 						<label for="tipo" class="block text-sm font-medium text-gray-700">Tipo</label>
 						<select id="tipo" name="tipo" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
 							<option value="">Todos</option>

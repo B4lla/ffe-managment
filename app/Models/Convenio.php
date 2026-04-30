@@ -11,6 +11,7 @@ class Convenio extends Model
         'empresa_id',
         'profesor_id',
         'representante_id',
+        'fecha_fin',
         'fecha_firma',
         'estado',
         'horario_practicas',

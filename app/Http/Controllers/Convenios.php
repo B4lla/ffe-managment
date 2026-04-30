@@ -18,66 +18,70 @@ class Convenios extends Controller
 {
 	public function index(Request $request)
 	{
-		$user = Auth::user();
-		$role = $this->currentRoleName($user);
+	    $user = Auth::user();
+	    $role = $this->currentRoleName($user);
+	
+	    $query = Convenio::with(['empresa.ultimoContactoFamilia.departamento', 'empresa.ultimoContactoFamilia.profesor'])
+	        ->whereHas('empresa', function ($q) use ($request) {
+	            if ($request->filled('categoria')) {
+	                $q->where('categoria', (string) $request->input('categoria'));
+	            }
+	
+	            if ($request->filled('tipo')) {
+	                $q->where('tipo', (string) $request->input('tipo'));
+	            }
+	
+	            if ($request->filled('q')) {
+	                $term = trim((string) $request->input('q'));
+	                $q->where(function ($subQuery) use ($term) {
+	                    $subQuery->where('nombre_razon_social', 'like', "%{$term}%")
+	                        ->orWhere('actividad', 'like', "%{$term}%")
+	                        ->orWhere('categoria', 'like', "%{$term}%")
+	                        ->orWhere('tipo', 'like', "%{$term}%");
+	                });
+	            }
+	        });
+	
+	    if ($request->filled('caducidad')) {
+	        $query->whereDate('fecha_fin', '<=', $request->input('caducidad'));
+	    }
 
-		$query = Convenio::with(['empresa.ultimoContactoFamilia.departamento', 'empresa.ultimoContactoFamilia.profesor'])
-			->whereHas('empresa', function ($q) use ($request) {
-			if ($request->filled('categoria')) {
-				$q->where('categoria', (string) $request->input('categoria'));
-			}
-
-			if ($request->filled('tipo')) {
-				$q->where('tipo', (string) $request->input('tipo'));
-			}
-
-			if ($request->filled('q')) {
-				$term = trim((string) $request->input('q'));
-				$q->where(function ($subQuery) use ($term) {
-					$subQuery->where('nombre_razon_social', 'like', "%{$term}%")
-						->orWhere('actividad', 'like', "%{$term}%")
-						->orWhere('categoria', 'like', "%{$term}%")
-						->orWhere('tipo', 'like', "%{$term}%");
-				});
-			}
-		});
-
-		if ($role === 'coordinador ffe' && $user?->departamento_id) {
-			$query->whereHas('empresa.contactosFamilia', function ($subQuery) use ($user) {
-				$subQuery->where('departamento_id', $user->departamento_id);
-			});
-		} elseif ($role === 'profesor tutor' && $user) {
-			$query->where('profesor_id', $user->id);
-		} elseif ($role === 'profesor' && $user) {
-			$query->where(function ($subQuery) use ($user) {
-				$subQuery->where('profesor_id', $user->id);
-				if ($user->departamento_id) {
-					$subQuery->orWhereHas('empresa.contactosFamilia', function ($contactos) use ($user) {
-						$contactos->where('departamento_id', $user->departamento_id);
-					});
-				}
-			});
-		} elseif ($role === 'direccion') {
-			$query->whereIn('estado', ['pendiente_firma_direccion', 'firmado_empresa', 'en_vigor']);
-		} elseif ($role === 'empresa externa' && $user?->empresa_id) {
-			$query->where('empresa_id', $user->empresa_id);
-		}
-
-		$convenios = $query
-			->orderByDesc('created_at')
-			->paginate(15)
-			->withQueryString();
-
-		$categorias = Empresa::categoriaOptions();
-		$tipos = Empresa::tipoOptions();
-
-		return view('convenios', [
-			'convenios' => $convenios,
-			'categorias' => $categorias,
-			'tipos' => $tipos,
-			'filtros' => $request->only(['categoria', 'tipo', 'q']),
-			'puede_crear' => $this->canCreateCompanies(Auth::user()),
-		]);
+	    if ($role === 'coordinador ffe' && $user?->departamento_id) {
+	        $query->whereHas('empresa.contactosFamilia', function ($subQuery) use ($user) {
+	            $subQuery->where('departamento_id', $user->departamento_id);
+	        });
+	    } elseif ($role === 'profesor tutor' && $user) {
+	        $query->where('profesor_id', $user->id);
+	    } elseif ($role === 'profesor' && $user) {
+	        $query->where(function ($subQuery) use ($user) {
+	            $subQuery->where('profesor_id', $user->id);
+	            if ($user->departamento_id) {
+	                $subQuery->orWhereHas('empresa.contactosFamilia', function ($contactos) use ($user) {
+	                    $contactos->where('departamento_id', $user->departamento_id);
+	                });
+	            }
+	        });
+	    } elseif ($role === 'direccion') {
+	        $query->whereIn('estado', ['pendiente_firma_direccion', 'firmado_empresa', 'en_vigor']);
+	    } elseif ($role === 'empresa externa' && $user?->empresa_id) {
+	        $query->where('empresa_id', $user->empresa_id);
+	    }
+	
+	    $convenios = $query
+	        ->orderByDesc('created_at')
+	        ->paginate(15)
+	        ->withQueryString();
+	
+	    $categorias = Empresa::categoriaOptions();
+	    $tipos = Empresa::tipoOptions();
+	
+	    return view('convenios', [
+	        'convenios' => $convenios,
+	        'categorias' => $categorias,
+	        'tipos' => $tipos,
+	        'filtros' => $request->only(['categoria', 'tipo', 'q', 'caducidad']), 
+	        'puede_crear' => $this->canCreateCompanies(Auth::user()),
+	    ]);
 	}
 
 	private function canCreateCompanies($user): bool
