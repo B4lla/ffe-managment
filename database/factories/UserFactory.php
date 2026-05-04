@@ -27,7 +27,7 @@ class UserFactory extends Factory
         $email = fake()->unique()->safeEmail();
 
         return [
-            'name' => fake()->name(),
+            'nombre' => fake()->name(),
             'email' => $email,
             'email_hash' => hash('sha256', strtolower(trim($email))),
             'email_verified_at' => now(),

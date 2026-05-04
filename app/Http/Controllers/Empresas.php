@@ -27,13 +27,7 @@ class Empresas extends Controller
 		}
 
 		if ($request->filled('q')) {
-			$term = trim((string) $request->input('q'));
-			$query->where(function ($subQuery) use ($term) {
-				$subQuery->where('nombre_razon_social', 'like', "%{$term}%")
-					->orWhere('actividad', 'like', "%{$term}%")
-					->orWhere('categoria', 'like', "%{$term}%")
-					->orWhere('tipo', 'like', "%{$term}%");
-			});
+			$query->searchByTerm($request->input('q'));
 		}
 
 		if ($role === 'empresa externa' && $user?->empresa_id) {
@@ -81,9 +75,20 @@ class Empresas extends Controller
 
 		$validated = $request->validate([
 			'nombre_razon_social' => ['required', 'string', 'max:300'],
-			'dni_cif' => ['required', 'string', 'max:20', 'unique:empresas,dni_cif'],
+			'dni_cif' => [
+				'required',
+				'string',
+				'max:20',
+				function (string $attribute, mixed $value, \Closure $fail): void {
+					$dniCifHash = Empresa::normalizeDniCif($value);
+
+					if ($dniCifHash !== null && Empresa::query()->where('dni_cif_hash', hash('sha256', $dniCifHash))->exists()) {
+						$fail('Ya existe una empresa con ese DNI/CIF.');
+					}
+				},
+			],
 			'actividad' => ['nullable', 'string'],
-			'categoria' => ['nullable', 'in:ayuntamiento,colegios_institutos'],
+			'categoria' => ['nullable', 'in:ayuntamiento,colegios_institutos,empresa'],
 			'tipo' => ['nullable', 'in:verde,amarilla,roja'],
 			'email' => ['nullable', 'string', 'email', 'max:150'],
 			'telefono1' => ['nullable', 'string', 'max:20'],

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Auth\HashAwareEloquentUserProvider;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Auth::provider('hash_eloquent', function ($app, array $config) {
+            return new HashAwareEloquentUserProvider($app['hash'], $config['model']);
+        });
     }
 }

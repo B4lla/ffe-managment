@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Departamento;
+use App\Models\Empresa;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -61,28 +62,36 @@ class Usuarios extends Controller
 
 	public function create()
 	{
-		abort_unless($this->canManageUsers(Auth::user()), 403);
+		$currentUser = Auth::user();
+		abort_unless($this->canCreateUsers($currentUser), 403);
 
-		$roles = Rol::query()
-			->orderBy('nombre')
-			->get(['id', 'nombre']);
+		$roles = $this->creatableRolesFor($currentUser);
 
 		$departamentos = Departamento::query()
 			->orderBy('nombre')
 			->get(['id', 'nombre']);
 
+		$empresas = Empresa::query()
+			->orderBy('nombre_razon_social')
+			->get(['id', 'nombre_razon_social']);
+
 		return view('usuarios.create', [
 			'roles' => $roles,
 			'departamentos' => $departamentos,
+			'empresas' => $empresas,
+			'puede_gestionar_todos' => $this->canManageUsers($currentUser),
 		]);
 	}
 
 	public function store(Request $request)
 	{
-		abort_unless($this->canManageUsers(Auth::user()), 403);
+		$currentUser = Auth::user();
+		abort_unless($this->canCreateUsers($currentUser), 403);
 
 		$email = strtolower(trim((string) $request->input('email')));
 		$request->merge(['email_hash' => hash('sha256', $email)]);
+
+		$allowedRoleIds = $this->creatableRolesFor($currentUser)->pluck('id')->map(fn ($id) => (int) $id)->all();
 
 		$validated = $request->validate([
 			'nombre' => ['required', 'string', 'max:200'],
@@ -91,9 +100,20 @@ class Usuarios extends Controller
 			'dni_cif' => ['nullable', 'string', 'max:20'],
 			'password' => ['required', 'confirmed', 'min:8'],
 			'departamento_id' => ['nullable', 'integer', 'exists:departamentos,id'],
-			'rol_id' => ['nullable', 'integer', 'exists:roles,id'],
+			'rol_id' => ['required', 'integer', 'exists:roles,id', 'in:'.implode(',', $allowedRoleIds)],
+			'empresa_id' => ['nullable', 'integer', 'exists:empresas,id'],
 			'activo' => ['nullable', 'boolean'],
 		]);
+
+		$empresaExternaRoleId = (int) Rol::query()
+			->where('nombre', 'Empresa externa')
+			->value('id');
+
+		if ((int) $validated['rol_id'] === $empresaExternaRoleId && empty($validated['empresa_id'])) {
+			return back()
+				->withErrors(['empresa_id' => 'Debes seleccionar una empresa para un usuario externo.'])
+				->withInput();
+		}
 
 		User::create([
 			'nombre' => $validated['nombre'],
@@ -101,13 +121,16 @@ class Usuarios extends Controller
 			'email_hash' => $validated['email_hash'],
 			'dni_cif' => $validated['dni_cif'] ?? null,
 			'password' => Hash::make($validated['password']),
-			'departamento_id' => $validated['departamento_id'] ?? null,
-			'rol_id' => $validated['rol_id'] ?? null,
+			'departamento_id' => (int) $validated['rol_id'] === $empresaExternaRoleId ? null : ($validated['departamento_id'] ?? null),
+			'empresa_id' => (int) $validated['rol_id'] === $empresaExternaRoleId ? ($validated['empresa_id'] ?? null) : null,
+			'rol_id' => $validated['rol_id'],
 			'activo' => $request->boolean('activo', true),
 		]);
 
+		$redirectRoute = $this->canManageUsers($currentUser) ? 'usuarios.index' : 'usuarios.create';
+
 		return redirect()
-			->route('usuarios.index')
+			->route($redirectRoute)
 			->with('status', 'Usuario creado correctamente.');
 	}
 
@@ -122,5 +145,25 @@ class Usuarios extends Controller
 		}
 
 		return false;
+	}
+
+	private function canCreateUsers($user): bool
+	{
+		if (! $user) {
+			return false;
+		}
+
+		return $this->userHasRole($user, ['Administrador', 'Coordinador FFE', 'Profesor tutor']);
+	}
+
+	private function creatableRolesFor($user)
+	{
+		$query = Rol::query()->orderBy('nombre');
+
+		if (! $this->userHasRole($user, 'Administrador')) {
+			$query->where('nombre', 'Empresa externa');
+		}
+
+		return $query->get(['id', 'nombre']);
 	}
 }

@@ -18,10 +18,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/usuarios/crear', [Usuarios::class, 'create'])
-        ->middleware(['verified', 'role.access:Administrador'])
+        ->middleware(['verified', 'role.access:Administrador,Coordinador FFE,Profesor tutor'])
         ->name('usuarios.create');
     Route::post('/usuarios', [Usuarios::class, 'store'])
-        ->middleware(['verified', 'role.access:Administrador'])
+        ->middleware(['verified', 'role.access:Administrador,Coordinador FFE,Profesor tutor'])
         ->name('usuarios.store');
     Route::get('/usuarios', [Usuarios::class, 'index'])
         ->middleware(['verified', 'role.access:Administrador'])
@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
 
 
 
-require_once __DIR__.'/Convenios.php';
-require_once __DIR__.'/empresas.php';
-require_once __DIR__.'/auth.php';
-require_once __DIR__.'/tareas_pendientes.php';
+require __DIR__.'/Convenios.php';
+require __DIR__.'/empresas.php';
+require __DIR__.'/auth.php';
+require __DIR__.'/tareas_pendientes.php';

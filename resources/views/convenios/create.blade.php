@@ -74,6 +74,15 @@
 
                     <div>
                         <h3 class="text-lg font-medium">Datos de la empresa</h3>
+                        <div class="mt-2">
+                            <label class="block text-sm font-medium text-gray-700">Empresa existente (opcional)</label>
+                            <select id="empresa_select" name="empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">Crear nueva empresa</option>
+                                @foreach($empresas ?? [] as $empresaOption)
+                                    <option value="{{ $empresaOption->id }}" @selected(old('empresa_id') == $empresaOption->id)>{{ $empresaOption->nombre_razon_social }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Nombre / Razón Social</label>
@@ -283,6 +292,23 @@
         const tutoresByDept = <?php echo json_encode($tutoresByDept ?? []); ?>;
 
         document.addEventListener('DOMContentLoaded', function () {
+            const empresaSelect = document.getElementById('empresa_select');
+            const empresaFields = ['empresa_nombre','empresa_dni_cif','empresa_actividad','domicilio_provincia','domicilio_municipio','domicilio_direccion','domicilio_codigo_postal','contacto_telefono1','contacto_telefono2','contacto_email'];
+
+            function toggleEmpresaFields() {
+                const useExisting = empresaSelect && empresaSelect.value !== '';
+                empresaFields.forEach(name => {
+                    const el = document.querySelector('[name="'+name+'"]');
+                    if (!el) return;
+                    el.disabled = useExisting;
+                });
+            }
+
+            if (empresaSelect) {
+                empresaSelect.addEventListener('change', toggleEmpresaFields);
+                // init state
+                toggleEmpresaFields();
+            }
             const depSelect = document.getElementById('departamento_select');
             const tutorSelect = document.getElementById('tutor_select');
 

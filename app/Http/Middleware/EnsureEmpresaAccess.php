@@ -20,6 +20,10 @@ class EnsureEmpresaAccess
             return $next($request);
         }
 
+        if ($role === 'empresa externa') {
+            return $this->handleExternalCompanyAccess($request, $next, $user, $ability);
+        }
+
         $allowed = match ($ability) {
             'viewAny', 'view' => ['coordinador ffe', 'profesor tutor', 'profesor', 'secretaria'],
             'create', 'store' => ['coordinador ffe', 'profesor tutor', 'secretaria'],
@@ -33,6 +37,30 @@ class EnsureEmpresaAccess
         }
 
         abort(403);
+    }
+
+    private function handleExternalCompanyAccess(Request $request, Closure $next, $user, string $ability): Response
+    {
+        if ($ability === 'viewAny') {
+            return $next($request);
+        }
+
+        if ($ability === 'view' && $this->isOwnCompanyRoute($request, $user)) {
+            return $next($request);
+        }
+
+        abort(403);
+    }
+
+    private function isOwnCompanyRoute(Request $request, $user): bool
+    {
+        $empresa = $request->route('empresa');
+
+        if ($empresa === null || ! $user?->empresa_id) {
+            return false;
+        }
+
+        return (int) $empresa === (int) $user->empresa_id;
     }
 
     private function roleName($user): string

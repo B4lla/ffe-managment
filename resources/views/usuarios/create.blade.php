@@ -21,6 +21,13 @@
                 <form method="POST" action="{{ route('usuarios.store') }}" class="space-y-5">
                     @csrf
 
+                    @php
+                        $empresaExternaRoleId = $roles->firstWhere('nombre', 'Empresa externa')?->id;
+                        $selectedRoleId = old('rol_id', $puede_gestionar_todos ? null : $empresaExternaRoleId);
+                        $showEmpresaField = $empresaExternaRoleId && (string) $selectedRoleId === (string) $empresaExternaRoleId;
+                        $cancelRoute = $puede_gestionar_todos ? route('usuarios.index') : route('empresas.index');
+                    @endphp
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
@@ -52,12 +59,25 @@
 
                     <div>
                         <label for="departamento_id" class="block text-sm font-medium text-gray-700">Departamento</label>
-                        <select id="departamento_id" name="departamento_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        <select id="departamento_id" name="departamento_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" @disabled($showEmpresaField)>
                             <option value="">Selecciona departamento</option>
                             @foreach($departamentos as $departamento)
                                 <option value="{{ $departamento->id }}" @selected(old('departamento_id') == $departamento->id)>{{ $departamento->nombre }}</option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div id="empresa-field" @class(['hidden' => ! $showEmpresaField])>
+                        <label for="empresa_id" class="block text-sm font-medium text-gray-700">Empresa asociada</label>
+                        <select id="empresa_id" name="empresa_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                            <option value="">Selecciona empresa</option>
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id }}" @selected(old('empresa_id') == $empresa->id)>{{ $empresa->nombre_razon_social }}</option>
+                            @endforeach
+                        </select>
+                        @error('empresa_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -78,7 +98,7 @@
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-3">
-                        <a href="{{ route('usuarios.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                        <a href="{{ $cancelRoute }}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
                             Cancelar
                         </a>
                         <button type="submit" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-black rounded-md hover:bg-indigo-700">
@@ -89,4 +109,34 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const roleSelect = document.getElementById('rol_id');
+            const empresaField = document.getElementById('empresa-field');
+            const empresaSelect = document.getElementById('empresa_id');
+            const departamentoSelect = document.getElementById('departamento_id');
+            const empresaExternaRoleId = @json($empresaExternaRoleId);
+
+            if (! roleSelect || ! empresaField || ! empresaSelect || ! departamentoSelect || ! empresaExternaRoleId) {
+                return;
+            }
+
+            const syncFields = () => {
+                const isEmpresaExterna = roleSelect.value === String(empresaExternaRoleId);
+
+                empresaField.classList.toggle('hidden', ! isEmpresaExterna);
+                departamentoSelect.disabled = isEmpresaExterna;
+
+                if (isEmpresaExterna) {
+                    departamentoSelect.value = '';
+                } else {
+                    empresaSelect.value = '';
+                }
+            };
+
+            roleSelect.addEventListener('change', syncFields);
+            syncFields();
+        });
+    </script>
 </x-app-layout>

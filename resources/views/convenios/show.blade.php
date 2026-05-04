@@ -12,11 +12,12 @@
                     $user = auth()->user();
                     $role = strtolower(trim((string) optional($user?->rol)->nombre ?? ''));
                     $isAssignedTutor = $user && isset($convenio->profesor_id) && $user->id === $convenio->profesor_id;
-                    $canManageConvenio = in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria', 'direccion', 'empresa'], true);
+                    $canManageConvenio = in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria', 'direccion', 'empresa externa'], true);
+                    $canDeleteConvenio = in_array($role, ['administrador', 'coordinador ffe'], true);
                 @endphp
 
                 <div class="mb-4 flex gap-2 flex-wrap">
-                    @if($canManageConvenio && in_array($convenio->estado, ['pendiente_datos', 'nuevo_solicitado'], true) && in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor'], true))
+                    @if($canManageConvenio && in_array($convenio->estado, ['pendiente_datos', 'nuevo_solicitado'], true) && in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true))
                         <a href="{{ route('convenios.datos', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-green-600 text-black rounded-md">Meter datos iniciales</a>
                     @endif
 
@@ -38,6 +39,16 @@
 
                     @if($role === 'empresa externa' && ($convenio->estado === 'en_vigor'))
                         <a href="{{ route('convenios.descargar_firmado', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-black rounded-md">Descargar convenio firmado</a>
+                    @endif
+
+                    @if($canDeleteConvenio)
+                        <form method="POST" action="{{ route('convenios.destroy', $convenio->id) }}" onsubmit="return confirm('Se va a eliminar este convenio. Esta acción no se puede deshacer.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-700 text-white rounded-md hover:bg-red-800">
+                                Eliminar convenio
+                            </button>
+                        </form>
                     @endif
                 </div>
 
@@ -71,8 +82,9 @@
                         <h4 class="text-sm font-semibold text-gray-600">Convenio</h4>
                         <div class="mt-2 text-sm text-gray-800">
                             <div><strong>ID:</strong> {{ $convenio->id }}</div>
-                            <div><strong>Fecha inicio:</strong> {{ optional($convenio->fecha_inicio)->format('d/m/Y') ?? '-' }}</div>
-                            <div><strong>Fecha fin:</strong> {{ optional($convenio->fecha_fin)->format('d/m/Y') ?? '-' }}</div>
+                            <div><strong>Fecha firma:</strong> {{ optional($convenio->fecha_firma)->format('d/m/Y') ?? '-' }}</div>
+                            <div><strong>Fecha caducidad:</strong> {{ optional($convenio->fecha_caducidad)->format('d/m/Y') ?? '-' }}</div>
+                            <div><strong>Vigencia:</strong> {{ \App\Models\Convenio::vigenciaLabel($convenio->vigencia_key) }}</div>
                             <div><strong>Estado:</strong> {{ $convenio->estado ?? '-' }}</div>
                             <div class="mt-3"><strong>Observaciones:</strong>
                                 <div class="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{{ $convenio->observaciones ?? '-' }}</div>

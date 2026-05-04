@@ -11,22 +11,40 @@
                 </div>
 
                 <!-- Navigation Links -->
+                @php
+                    $navRole = '';
+                    if (Auth::check()) {
+                        $navRole = strtolower(trim((string) optional(Auth::user()->rol)->nombre));
+                    }
+                @endphp
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')">
-                        {{ __('Usuarios') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
-                        {{ __('Empresas') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
-                        {{ __('Convenios') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
-                        {{ __('Tareas pendientes') }}
-                    </x-nav-link>
+                    @if ($navRole === 'empresa externa')
+                        <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                            {{ __('Convenios') }}
+                        </x-nav-link>
+                    @else
+                        <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                            {{ __('Dashboard') }}
+                        </x-nav-link>
+                        @if ($navRole === 'administrador')
+                            <x-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')">
+                                {{ __('Usuarios') }}
+                            </x-nav-link>
+                        @elseif (in_array($navRole, ['coordinador ffe', 'profesor tutor'], true))
+                            <x-nav-link :href="route('usuarios.create')" :active="request()->routeIs('usuarios.create') || request()->routeIs('usuarios.store')">
+                                {{ __('Alta empresa') }}
+                            </x-nav-link>
+                        @endif
+                        <x-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
+                            {{ __('Empresas') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                            {{ __('Convenios') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                            {{ __('Tareas pendientes') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -78,22 +96,40 @@
 
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
+        @php
+            $navRole = '';
+            if (Auth::check()) {
+                $navRole = strtolower(trim((string) optional(Auth::user()->rol)->nombre));
+            }
+        @endphp
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')">
-                {{ __('Usuarios') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
-                {{ __('Empresas') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
-                {{ __('Convenios') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
-                {{ __('Tareas pendientes') }}
-            </x-responsive-nav-link>
+            @if ($navRole === 'empresa externa')
+                <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                    {{ __('Convenios') }}
+                </x-responsive-nav-link>
+            @else
+                <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    {{ __('Dashboard') }}
+                </x-responsive-nav-link>
+                @if ($navRole === 'administrador')
+                    <x-responsive-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')">
+                        {{ __('Usuarios') }}
+                    </x-responsive-nav-link>
+                @elseif (in_array($navRole, ['coordinador ffe', 'profesor tutor'], true))
+                    <x-responsive-nav-link :href="route('usuarios.create')" :active="request()->routeIs('usuarios.create') || request()->routeIs('usuarios.store')">
+                        {{ __('Alta empresa') }}
+                    </x-responsive-nav-link>
+                @endif
+                <x-responsive-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
+                    {{ __('Empresas') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
+                    {{ __('Convenios') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                    {{ __('Tareas pendientes') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

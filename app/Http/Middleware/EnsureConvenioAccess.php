@@ -49,7 +49,7 @@ class EnsureConvenioAccess
         $allowed = match ($ability) {
             'view' => ['direccion', 'coordinador ffe', 'profesor tutor', 'profesor', 'secretaria', 'empresa externa'],
             'create', 'store' => ['coordinador ffe', 'profesor tutor', 'secretaria'],
-            'editInitial' => ['coordinador ffe', 'profesor tutor', 'secretaria'],
+            'editInitial' => ['coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'],
             'generatePdf' => ['secretaria'],
             'downloadProvisional' => ['direccion', 'coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'],
             'firmEmpresa' => ['empresa externa'],

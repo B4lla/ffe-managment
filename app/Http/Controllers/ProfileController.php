@@ -26,9 +26,11 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        $currentEmailHash = $request->user()->email_hash;
+
         $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
+        if ($request->user()->email_hash !== $currentEmailHash) {
             $request->user()->email_verified_at = null;
         }
 

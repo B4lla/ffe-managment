@@ -14,10 +14,19 @@ Route::get('/convenios/insertar', [Convenios::class, 'create'])
     ->middleware(['auth', 'verified', 'convenio.access:create'])
     ->name('convenios.insertar');
 
+Route::post('/convenios/importar', [Convenios::class, 'importarConvenios'])
+    ->middleware(['auth', 'verified', 'convenio.access:create'])
+    ->name('convenios.importar');
+
 Route::get('/convenios/{id}', function ($id) {
     $convenio = Convenio::with('empresa')->findOrFail($id);
     return view('convenios.show', compact('convenio'));
 })->whereNumber('id')->middleware(['auth', 'verified', 'convenio.access:view'])->name('convenios.show');
+
+Route::delete('/convenios/{id}', [Convenios::class, 'destroy'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:delete'])
+    ->name('convenios.destroy');
 
 Route::get('/convenios/{id}/datos', function ($id) {
     $convenio = Convenio::with('empresa')->findOrFail($id);

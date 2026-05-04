@@ -76,6 +76,62 @@ class Empresa extends Model
         return $this->hasMany(EmpresaContactoFamilia::class, 'empresa_id');
     }
 
+    public function scopeSearchByTerm($query, ?string $term)
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return $query;
+        }
+
+        $normalizedEmail = self::normalizeEmail($term);
+        $normalizedPhone = self::normalizePhone($term);
+        $normalizedDniCif = self::normalizeDniCif($term);
+
+        return $query->where(function ($subQuery) use ($term, $normalizedEmail, $normalizedPhone, $normalizedDniCif) {
+            $subQuery->where('nombre_razon_social', 'like', "%{$term}%")
+                ->orWhere('actividad', 'like', "%{$term}%")
+                ->orWhere('categoria', 'like', "%{$term}%")
+                ->orWhere('tipo', 'like', "%{$term}%");
+
+            if ($normalizedEmail !== null) {
+                $subQuery->orWhere('email_hash', hash('sha256', $normalizedEmail));
+            }
+
+            if ($normalizedPhone !== null) {
+                $phoneHash = hash('sha256', $normalizedPhone);
+
+                $subQuery->orWhere('telefono1_hash', $phoneHash)
+                    ->orWhere('telefono2_hash', $phoneHash);
+            }
+
+            if ($normalizedDniCif !== null) {
+                $subQuery->orWhere('dni_cif_hash', hash('sha256', $normalizedDniCif));
+            }
+        });
+    }
+
+    public static function normalizeEmail($value): ?string
+    {
+        $normalized = strtolower(trim((string) $value));
+
+        return $normalized === '' || ! filter_var($normalized, FILTER_VALIDATE_EMAIL) ? null : $normalized;
+    }
+
+    public static function normalizePhone($value): ?string
+    {
+        $normalized = preg_replace('/\D+/', '', (string) $value) ?? '';
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    public static function normalizeDniCif($value): ?string
+    {
+        $normalized = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim((string) $value)) ?? '');
+
+        return $normalized === '' ? null : $normalized;
+    }
+
     public function ultimoContactoFamilia()
     {
         return $this->hasOne(EmpresaContactoFamilia::class, 'empresa_id')->latestOfMany();
@@ -89,6 +145,7 @@ class Empresa extends Model
     public function setDniCifAttribute($value): void
     {
         $this->attributes['dni_cif'] = $this->encryptValue($value);
+        $this->attributes['dni_cif_hash'] = $this->hashNormalizedValue(self::normalizeDniCif($value));
     }
 
     public function getEmailAttribute($value)
@@ -99,6 +156,7 @@ class Empresa extends Model
     public function setEmailAttribute($value): void
     {
         $this->attributes['email'] = $this->encryptValue($value);
+        $this->attributes['email_hash'] = $this->hashNormalizedValue(self::normalizeEmail($value));
     }
 
     public function getTelefono1Attribute($value)
@@ -109,6 +167,7 @@ class Empresa extends Model
     public function setTelefono1Attribute($value): void
     {
         $this->attributes['telefono1'] = $this->encryptValue($value);
+        $this->attributes['telefono1_hash'] = $this->hashNormalizedValue(self::normalizePhone($value));
     }
 
     public function getTelefono2Attribute($value)
@@ -119,6 +178,7 @@ class Empresa extends Model
     public function setTelefono2Attribute($value): void
     {
         $this->attributes['telefono2'] = $this->encryptValue($value);
+        $this->attributes['telefono2_hash'] = $this->hashNormalizedValue(self::normalizePhone($value));
     }
 
     public function getProvinciaAttribute($value)
@@ -177,5 +237,10 @@ class Empresa extends Model
     private function encryptValue($value)
     {
         return $value === null ? null : Crypt::encryptString($value);
+    }
+
+    private function hashNormalizedValue(?string $value): ?string
+    {
+        return $value === null ? null : hash('sha256', $value);
     }
 }

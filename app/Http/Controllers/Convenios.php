@@ -13,9 +13,43 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\ConveniosImport;
 
 class Convenios extends Controller
 {
+
+	public function importarConvenios(Request $request)
+	{
+		abort_unless($this->userCanCreateOrEdit(Auth::user()), 403);
+		$request->validate([
+			'csv_file' => 'required|file|mimes:xlsx,csv,txt',
+		]);
+
+		$file = $request->file('csv_file');
+		$importer = new ConveniosImport();
+		try {
+			Excel::import($importer, $file);
+			$msg = 'Convenios importados correctamente.';
+			if (! empty($importer->imported)) {
+				$msg .= ' Importados: '.count($importer->imported);
+			}
+			if (! empty($importer->errores)) {
+				$msg .= ' Errores: '.implode(' | ', $importer->errores);
+			}
+		} catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+			$failures = $e->failures();
+			$errors = [];
+			foreach ($failures as $failure) {
+				$errors[] = 'Fila '.($failure->row()).': '.implode(', ', $failure->errors());
+			}
+			$msg = 'Errores de validación: '.implode(' | ', $errors);
+		} catch (\Throwable $e) {
+			$msg = 'Error importando el archivo: '.$e->getMessage();
+		}
+		return redirect()->route('convenios.index')->with('status', $msg);
+	}
 	public function index(Request $request)
 	{
 	    $user = Auth::user();
@@ -32,18 +66,12 @@ class Convenios extends Controller
 	            }
 	
 	            if ($request->filled('q')) {
-	                $term = trim((string) $request->input('q'));
-	                $q->where(function ($subQuery) use ($term) {
-	                    $subQuery->where('nombre_razon_social', 'like', "%{$term}%")
-	                        ->orWhere('actividad', 'like', "%{$term}%")
-	                        ->orWhere('categoria', 'like', "%{$term}%")
-	                        ->orWhere('tipo', 'like', "%{$term}%");
-	                });
+	                $q->searchByTerm($request->input('q'));
 	            }
 	        });
-	
-	    if ($request->filled('caducidad')) {
-	        $query->whereDate('fecha_fin', '<=', $request->input('caducidad'));
+
+	    if ($request->filled('vigencia')) {
+	        $this->applyVigenciaFilter($query, (string) $request->input('vigencia'));
 	    }
 
 	    if ($role === 'coordinador ffe' && $user?->departamento_id) {
@@ -74,14 +102,39 @@ class Convenios extends Controller
 	
 	    $categorias = Empresa::categoriaOptions();
 	    $tipos = Empresa::tipoOptions();
+        $vigencias = Convenio::vigenciaOptions();
 	
 	    return view('convenios', [
 	        'convenios' => $convenios,
 	        'categorias' => $categorias,
 	        'tipos' => $tipos,
-	        'filtros' => $request->only(['categoria', 'tipo', 'q', 'caducidad']), 
+	        'vigencias' => $vigencias,
+	        'filtros' => $request->only(['categoria', 'tipo', 'q', 'vigencia']), 
 	        'puede_crear' => $this->canCreateCompanies(Auth::user()),
 	    ]);
+	}
+
+	public function destroy(int $id)
+	{
+		$convenio = Convenio::query()
+			->with('empresa:id,nombre_razon_social')
+			->findOrFail($id);
+
+		DB::transaction(function () use ($convenio) {
+			DB::table('documentos_pdf')->where('convenio_id', $convenio->id)->delete();
+			DB::table('tareas_pendientes')->where('convenio_id', $convenio->id)->delete();
+			DB::table('alumno_convenio')->where('convenio_id', $convenio->id)->delete();
+			DB::table('convenio_tutor_empresa')->where('convenio_id', $convenio->id)->delete();
+			DB::table('convenio_ciclo')->where('convenio_id', $convenio->id)->delete();
+
+			$convenio->delete();
+		});
+
+		$empresaNombre = $convenio->empresa?->nombre_razon_social ?: 'sin empresa';
+
+		return redirect()
+			->route('convenios.index')
+			->with('status', "Convenio eliminado correctamente ({$empresaNombre}).");
 	}
 
 	private function canCreateCompanies($user): bool
@@ -106,6 +159,8 @@ class Convenios extends Controller
 		$departamentos = Departamento::all();
 		$categorias = Empresa::categoriaOptions();
 		$tipos = Empresa::tipoOptions();
+
+		$empresas = Empresa::query()->orderBy('nombre_razon_social')->get(['id', 'nombre_razon_social']);
 
 		$ciclos = DB::table('ciclos')
 			->leftJoin('departamentos', 'ciclos.departamento_id', '=', 'departamentos.id')
@@ -135,7 +190,7 @@ class Convenios extends Controller
 			];
 		}
 
-		return view('convenios.create', compact('departamentos', 'categorias', 'tipos', 'ciclos', 'tutoresByDept'));
+		return view('convenios.create', compact('departamentos', 'categorias', 'tipos', 'ciclos', 'tutoresByDept', 'empresas'));
     }
 
     public function store(Request $request)
@@ -143,6 +198,7 @@ class Convenios extends Controller
 		abort_unless($this->userCanCreateOrEdit(Auth::user()), 403);
 
 		$validated = $request->validate([
+			'empresa_id' => 'nullable|exists:empresas,id',
 			'responsable_nombre' => 'nullable|string|max:200',
 			'responsable_telefono' => 'nullable|string|max:20',
 			'responsable_email' => 'nullable|email|max:150',
@@ -150,8 +206,23 @@ class Convenios extends Controller
 			'tutor_id' => 'nullable|exists:usuarios,id',
 			'tutor_telefono' => 'nullable|string|max:20',
 			'tutor_email' => 'nullable|email|max:150',
-			'empresa_nombre' => 'required|string|max:300',
-			'empresa_dni_cif' => 'required|string|max:20',
+			'empresa_nombre' => 'required_without:empresa_id|string|max:300',
+			'empresa_dni_cif' => [
+				'required_without:empresa_id',
+				'string',
+				'max:20',
+				function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+					if ($request->filled('empresa_id')) {
+						return;
+					}
+
+					$dniCifHash = Empresa::normalizeDniCif($value);
+
+					if ($dniCifHash !== null && Empresa::query()->where('dni_cif_hash', hash('sha256', $dniCifHash))->exists()) {
+						$fail('Ya existe una empresa con ese DNI/CIF. Selecciona la empresa existente.');
+					}
+				},
+			],
 			'empresa_actividad' => 'nullable|string|max:5000',
 			'categoria' => 'nullable|in:ayuntamiento,colegios_institutos,empresa',
 			'tipo' => 'nullable|in:verde,amarilla,roja',
@@ -183,20 +254,24 @@ class Convenios extends Controller
 		]);
 
 		$convenio = DB::transaction(function () use ($request, $validated) {
-			$empresa = Empresa::create([
-				'nombre_razon_social' => $validated['empresa_nombre'],
-				'dni_cif' => $validated['empresa_dni_cif'],
-				'actividad' => $validated['empresa_actividad'] ?? null,
-				'categoria' => $validated['categoria'] ?? null,
-				'tipo' => $validated['tipo'] ?? null,
-				'email' => $validated['contacto_email'] ?? null,
-				'telefono1' => $validated['contacto_telefono1'] ?? null,
-				'telefono2' => $validated['contacto_telefono2'] ?? null,
-				'provincia' => $validated['domicilio_provincia'] ?? null,
-				'municipio' => $validated['domicilio_municipio'] ?? null,
-				'direccion' => $validated['domicilio_direccion'] ?? null,
-				'codigo_postal' => $validated['domicilio_codigo_postal'] ?? null,
-			]);
+			if (! empty($validated['empresa_id'])) {
+				$empresa = Empresa::find($validated['empresa_id']);
+			} else {
+				$empresa = Empresa::create([
+					'nombre_razon_social' => $validated['empresa_nombre'],
+					'dni_cif' => $validated['empresa_dni_cif'],
+					'actividad' => $validated['empresa_actividad'] ?? null,
+					'categoria' => $validated['categoria'] ?? null,
+					'tipo' => $validated['tipo'] ?? null,
+					'email' => $validated['contacto_email'] ?? null,
+					'telefono1' => $validated['contacto_telefono1'] ?? null,
+					'telefono2' => $validated['contacto_telefono2'] ?? null,
+					'provincia' => $validated['domicilio_provincia'] ?? null,
+					'municipio' => $validated['domicilio_municipio'] ?? null,
+					'direccion' => $validated['domicilio_direccion'] ?? null,
+					'codigo_postal' => $validated['domicilio_codigo_postal'] ?? null,
+				]);
+			}
 
 			$representanteId = null;
 			if (! empty($validated['representante_nif']) || ! empty($validated['representante_nombre']) || ! empty($validated['representante_apellido1']) || ! empty($validated['representante_apellido2'])) {
@@ -316,6 +391,29 @@ class Convenios extends Controller
 
 		return $slots === [] ? null : implode(', ', $slots);
 	}
+
+    private function applyVigenciaFilter($query, string $vigencia): void
+    {
+        $today = Carbon::today();
+        $caducadoDesde = $today->copy()->subYears(4);
+        $caducaEnTresMesesDesde = $today->copy()->subYears(4)->addDay();
+        $caducaEnTresMesesHasta = $today->copy()->subYears(3)->subMonths(9);
+        $caducaEnSeisMesesDesde = $today->copy()->subYears(3)->subMonths(9)->addDay();
+        $caducaEnSeisMesesHasta = $today->copy()->subYears(3)->subMonths(6);
+        $caducaEnUnAnoDesde = $today->copy()->subYears(3)->subMonths(6)->addDay();
+        $caducaEnUnAnoHasta = $today->copy()->subYears(3);
+        $enVigorDesde = $today->copy()->subYears(4)->addDay();
+
+        match ($vigencia) {
+            'caducado' => $query->whereDate('fecha_firma', '<=', $caducadoDesde),
+            'caduca_3_meses' => $query->whereBetween('fecha_firma', [$caducaEnTresMesesDesde, $caducaEnTresMesesHasta]),
+            'caduca_6_meses' => $query->whereBetween('fecha_firma', [$caducaEnSeisMesesDesde, $caducaEnSeisMesesHasta]),
+            'caduca_1_ano' => $query->whereBetween('fecha_firma', [$caducaEnUnAnoDesde, $caducaEnUnAnoHasta]),
+            'en_vigor' => $query->whereDate('fecha_firma', '>=', $enVigorDesde),
+            'sin_fecha_firma' => $query->whereNull('fecha_firma'),
+            default => null,
+        };
+    }
 
 	private function currentRoleName($user): string
 	{
