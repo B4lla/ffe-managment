@@ -80,8 +80,8 @@
 						</a>
 						<form action="{{ route('convenios.importar') }}" method="POST" enctype="multipart/form-data" class="inline-flex items-center ml-4">
 							@csrf
-							<input type="file" name="csv_file" accept=".csv,.xlsx" required class="mr-2">
-							<button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Importar Excel/CSV</button>
+							<input type="file" name="csv_file" accept=".csv,.xlsx,.xls,.txt" required class="mr-2">
+							<button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Importar convenios</button>
 						</form>
 					@endif
 				</div>
@@ -102,6 +102,7 @@
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefono</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicacion</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha firma</th>
+								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Caduca</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vigencia</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ver</th>
@@ -118,6 +119,11 @@
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $convenio->empresa->telefono1 ?? $convenio->empresa->telefono2 ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ trim(($convenio->empresa->municipio ?? '').' '.($convenio->empresa->provincia ?? '')) ?: '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ optional($convenio->fecha_firma)->format('d/m/Y') ?? '-' }}</td>
+									<td class="px-4 py-3 text-sm text-gray-700">
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ \App\Models\Convenio::estadoBadgeClass($convenio->estado) }}">
+											{{ \App\Models\Convenio::estadoLabel($convenio->estado) }}
+										</span>
+									</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ optional($convenio->fecha_caducidad)->format('d/m/Y') ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">
 										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ \App\Models\Convenio::vigenciaBadgeClass($convenio->vigencia_key) }}">
@@ -130,7 +136,7 @@
 								</tr>
 							@empty
 								<tr>
-									<td colspan="11" class="px-4 py-8 text-center text-sm text-gray-500">
+									<td colspan="12" class="px-4 py-8 text-center text-sm text-gray-500">
 										No hay convenios para los filtros seleccionados.
 									</td>
 								</tr>

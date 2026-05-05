@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Departamento;
 use App\Models\Empresa;
 use App\Models\EmpresaContactoFamilia;
+use App\Models\RegistroContacto;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -114,6 +115,41 @@ class Empresas extends Controller
 		return redirect()
 			->route('empresas.index')
 			->with('status', 'Empresa creada correctamente.');
+	}
+
+	public function contactosIndex(Request $request, Empresa $empresa)
+	{
+		$contactos = RegistroContacto::query()
+			->with('profesor:id,nombre')
+			->where('empresa_id', $empresa->id)
+			->orderByDesc('fecha_contacto')
+			->paginate(15)
+			->withQueryString();
+
+		return view('empresas.contactos', [
+			'empresa' => $empresa,
+			'contactos' => $contactos,
+		]);
+	}
+
+	public function contactosStore(Request $request, Empresa $empresa)
+	{
+		$validated = $request->validate([
+			'resultado' => ['nullable', 'string', 'max:100'],
+			'observaciones' => ['nullable', 'string'],
+		]);
+
+		RegistroContacto::create([
+			'empresa_id' => $empresa->id,
+			'profesor_id' => (int) $request->user()->id,
+			'resultado' => $validated['resultado'] ?? null,
+			'observaciones' => $validated['observaciones'] ?? null,
+			'fecha_contacto' => now(),
+		]);
+
+		return redirect()
+			->route('empresas.contactos.index', $empresa->id)
+			->with('status', 'Contacto guardado correctamente.');
 	}
 
 	private function canCreateCompanies($user): bool

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
 
 use App\Models\EmpresaContactoFamilia;
+use App\Models\RegistroContacto;
 
 class Empresa extends Model
 {
@@ -135,6 +136,11 @@ class Empresa extends Model
     public function ultimoContactoFamilia()
     {
         return $this->hasOne(EmpresaContactoFamilia::class, 'empresa_id')->latestOfMany();
+    }
+
+    public function contactosRegistrados()
+    {
+        return $this->hasMany(RegistroContacto::class, 'empresa_id');
     }
 
     public function getDniCifAttribute($value)

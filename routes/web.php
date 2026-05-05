@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Usuarios;
 use App\Http\Controllers\Convenios;
+use App\Http\Controllers\InformesController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -38,6 +39,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/convenios', [Convenios::class, 'store'])
         ->middleware(['verified', 'convenio.access:store'])
         ->name('convenios.store');
+    Route::get('/informes', [InformesController::class, 'index'])
+        ->middleware(['verified', 'role.access:Administrador,Direccion,Coordinador FFE,Profesor tutor,Profesor,Secretaria'])
+        ->name('informes.index');
+    Route::get('/informes/exportar', [InformesController::class, 'export'])
+        ->middleware(['verified', 'role.access:Administrador,Direccion,Coordinador FFE,Profesor tutor,Profesor,Secretaria'])
+        ->name('informes.export');
 });
 
 

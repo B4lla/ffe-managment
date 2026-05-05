@@ -29,13 +29,13 @@ Route::middleware(['auth', 'verified'])
             return "Eliminar empresa {$empresa}";
         })->middleware('empresa.access:delete')->name('destroy');
 
-        Route::get('/{empresa}/contactos', function ($empresa) {
-            return "Historial de contactos de empresa {$empresa}";
-        })->middleware('empresa.access:contacts')->name('contactos.index');
+        Route::get('/{empresa}/contactos', [Empresas::class, 'contactosIndex'])
+            ->middleware('empresa.access:contacts')
+            ->name('contactos.index');
 
-        Route::post('/{empresa}/contactos', function ($empresa) {
-            return "Guardar contacto de empresa {$empresa}";
-        })->middleware('empresa.access:contacts')->name('contactos.store');
+        Route::post('/{empresa}/contactos', [Empresas::class, 'contactosStore'])
+            ->middleware('empresa.access:contacts')
+            ->name('contactos.store');
 
         Route::get('/exportar', function () {
             return 'Exportar empresas';

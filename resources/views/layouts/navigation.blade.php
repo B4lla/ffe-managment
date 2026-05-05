@@ -41,6 +41,9 @@
                         <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
                             {{ __('Convenios') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('informes.index')" :active="request()->routeIs('informes.*')">
+                            {{ __('Informes') }}
+                        </x-nav-link>
                         <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
                             {{ __('Tareas pendientes') }}
                         </x-nav-link>
@@ -125,6 +128,9 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
                     {{ __('Convenios') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('informes.index')" :active="request()->routeIs('informes.*')">
+                    {{ __('Informes') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
                     {{ __('Tareas pendientes') }}

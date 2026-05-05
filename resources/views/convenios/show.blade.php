@@ -11,33 +11,40 @@
                 @php
                     $user = auth()->user();
                     $role = strtolower(trim((string) optional($user?->rol)->nombre ?? ''));
+                    $isAdmin = $role === 'administrador';
                     $isAssignedTutor = $user && isset($convenio->profesor_id) && $user->id === $convenio->profesor_id;
                     $canManageConvenio = in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria', 'direccion', 'empresa externa'], true);
                     $canDeleteConvenio = in_array($role, ['administrador', 'coordinador ffe'], true);
                 @endphp
 
+                @if (session('status') || session('success'))
+                    <div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+                        {{ session('status') ?? session('success') }}
+                    </div>
+                @endif
+
                 <div class="mb-4 flex gap-2 flex-wrap">
-                    @if($canManageConvenio && in_array($convenio->estado, ['pendiente_datos', 'nuevo_solicitado'], true) && in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true))
+                    @if($canManageConvenio && in_array($convenio->estado, ['borrador', 'pendiente_datos', 'nuevo_solicitado', 'pendiente_secretaria'], true) && ($isAdmin || in_array($role, ['coordinador ffe', 'profesor tutor', 'empresa externa', 'secretaria'], true)))
                         <a href="{{ route('convenios.datos', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-green-600 text-black rounded-md">Meter datos iniciales</a>
                     @endif
 
-                    @if(in_array($role, ['secretaria', 'administrador'], true) && in_array($convenio->estado, ['pendiente_secretaria', 'nuevo_solicitado'], true))
+                    @if(($isAdmin || $role === 'secretaria') && in_array($convenio->estado, ['pendiente_secretaria', 'nuevo_solicitado', 'borrador'], true))
                         <a href="{{ route('convenios.generar_pdf', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-yellow-600 text-black rounded-md">Generar/Subir PDF inicial</a>
                     @endif
 
-                    @if($role === 'empresa externa' && in_array($convenio->estado, ['pendiente_firma_empresa', 'firmado_centro'], true))
+                    @if($role === 'empresa externa' && $convenio->estado === 'pendiente_firma_empresa')
                         <a href="{{ route('convenios.firmar_empresa', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-indigo-600 text-black rounded-md">Descargar y firmar (Empresa)</a>
                     @endif
 
-                    @if($isAssignedTutor && in_array($convenio->estado, ['pendiente_validacion_tutor', 'firmado_empresa'], true))
+                    @if(($isAdmin || $isAssignedTutor) && in_array($convenio->estado, ['pendiente_validacion_tutor', 'firmado_empresa'], true))
                         <a href="{{ route('convenios.validar_firma', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-purple-600 text-black rounded-md">Validar firma de empresa</a>
                     @endif
 
-                    @if($role === 'direccion' && in_array($convenio->estado, ['pendiente_firma_direccion', 'validado_tutor'], true))
+                    @if(($isAdmin || $role === 'direccion') && in_array($convenio->estado, ['pendiente_firma_direccion', 'validado_tutor'], true))
                         <a href="{{ route('convenios.firmar_centro', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-red-600 text-black rounded-md">Firmar por el centro</a>
                     @endif
 
-                    @if($role === 'empresa externa' && ($convenio->estado === 'en_vigor'))
+                    @if(($isAdmin || in_array($role, ['empresa externa', 'direccion'], true)) && ($convenio->estado === 'en_vigor'))
                         <a href="{{ route('convenios.descargar_firmado', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-black rounded-md">Descargar convenio firmado</a>
                     @endif
 
@@ -85,12 +92,46 @@
                             <div><strong>Fecha firma:</strong> {{ optional($convenio->fecha_firma)->format('d/m/Y') ?? '-' }}</div>
                             <div><strong>Fecha caducidad:</strong> {{ optional($convenio->fecha_caducidad)->format('d/m/Y') ?? '-' }}</div>
                             <div><strong>Vigencia:</strong> {{ \App\Models\Convenio::vigenciaLabel($convenio->vigencia_key) }}</div>
-                            <div><strong>Estado:</strong> {{ $convenio->estado ?? '-' }}</div>
+                            <div><strong>Estado:</strong> {{ \App\Models\Convenio::estadoLabel($convenio->estado) }}</div>
                             <div class="mt-3"><strong>Observaciones:</strong>
                                 <div class="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{{ $convenio->observaciones ?? '-' }}</div>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-8">
+                    <h4 class="text-sm font-semibold text-gray-600 mb-3">Documentos del convenio</h4>
+                    @if($convenio->documentos->isEmpty())
+                        <div class="text-sm text-gray-500">Aun no hay PDFs guardados.</div>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Estado doc</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Subido</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Error</th>
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Descarga</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-100">
+                                    @foreach($convenio->documentos as $documento)
+                                        <tr>
+                                            <td class="px-3 py-2 text-sm text-gray-800">{{ \App\Models\DocumentoPdf::tipoLabel($documento->tipo) }}</td>
+                                            <td class="px-3 py-2 text-sm text-gray-700">{{ $documento->estado_doc }}</td>
+                                            <td class="px-3 py-2 text-sm text-gray-700">{{ optional($documento->created_at)->format('d/m/Y H:i') }}</td>
+                                            <td class="px-3 py-2 text-sm text-gray-700">{{ $documento->es_erroneo ? ($documento->motivo_error ?: 'Si') : '-' }}</td>
+                                            <td class="px-3 py-2 text-sm">
+                                                <a href="{{ route('convenios.documentos.descargar', [$convenio->id, $documento->id]) }}" class="text-indigo-600 hover:underline">Descargar</a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
 
             </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Carbon;
 
@@ -30,9 +31,61 @@ class Convenio extends Model
         'observaciones',
     ];
 
+    public const ESTADOS = [
+        'borrador' => 'Borrador',
+        'nuevo_solicitado' => 'Nuevo solicitado',
+        'pendiente_datos' => 'Pendiente de datos',
+        'pendiente_secretaria' => 'Pendiente de secretaria',
+        'pendiente_firma_empresa' => 'Pendiente firma empresa',
+        'pendiente_validacion_tutor' => 'Pendiente validacion tutor',
+        'firmado_empresa' => 'Firmado por empresa',
+        'pendiente_firma_direccion' => 'Pendiente firma direccion',
+        'firmado_centro' => 'Firmado por centro',
+        'en_vigor' => 'En vigor',
+    ];
+
     public function empresa(): BelongsTo
     {
         return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
+
+    public function profesor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'profesor_id');
+    }
+
+    public function representante(): BelongsTo
+    {
+        return $this->belongsTo(Representante::class, 'representante_id');
+    }
+
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(DocumentoPdf::class, 'convenio_id')->latest();
+    }
+
+    public static function estadoLabel(?string $estado): string
+    {
+        return self::ESTADOS[$estado] ?? ($estado ?: '-');
+    }
+
+    public static function estadoBadgeClass(?string $estado): string
+    {
+        return match ($estado) {
+            'en_vigor' => 'bg-green-100 text-green-800',
+            'firmado_centro', 'firmado_empresa' => 'bg-emerald-100 text-emerald-800',
+            'pendiente_firma_empresa', 'pendiente_validacion_tutor', 'pendiente_firma_direccion' => 'bg-yellow-100 text-yellow-800',
+            'pendiente_secretaria', 'pendiente_datos', 'nuevo_solicitado' => 'bg-blue-100 text-blue-800',
+            default => 'bg-gray-100 text-gray-700',
+        };
+    }
+
+    public function latestValidDocument(string $tipo): ?DocumentoPdf
+    {
+        return $this->documentos()
+            ->where('tipo', $tipo)
+            ->where('es_erroneo', false)
+            ->first();
     }
 
     public static function vigenciaOptions(): array

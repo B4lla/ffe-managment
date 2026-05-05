@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Convenios;
 use App\Http\Controllers\DashboardController;
-use App\Models\Convenio;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -18,42 +17,83 @@ Route::post('/convenios/importar', [Convenios::class, 'importarConvenios'])
     ->middleware(['auth', 'verified', 'convenio.access:create'])
     ->name('convenios.importar');
 
-Route::get('/convenios/{id}', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.show', compact('convenio'));
-})->whereNumber('id')->middleware(['auth', 'verified', 'convenio.access:view'])->name('convenios.show');
+Route::get('/convenios/{id}', [Convenios::class, 'show'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:view'])
+    ->name('convenios.show');
 
 Route::delete('/convenios/{id}', [Convenios::class, 'destroy'])
     ->whereNumber('id')
     ->middleware(['auth', 'verified', 'convenio.access:delete'])
     ->name('convenios.destroy');
 
-Route::get('/convenios/{id}/datos', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.meter_datos', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:editInitial'])->name('convenios.datos');
+Route::get('/convenios/{id}/datos', [Convenios::class, 'editInitial'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:editInitial'])
+    ->name('convenios.datos');
 
-Route::get('/convenios/{id}/generar-pdf', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.generar_pdf', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:generatePdf'])->name('convenios.generar_pdf');
+Route::put('/convenios/{id}/datos', [Convenios::class, 'updateInitial'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:editInitial'])
+    ->name('convenios.datos.update');
 
-Route::get('/convenios/{id}/firmar-empresa', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.descargar_firmar_empresa', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:firmEmpresa'])->name('convenios.firmar_empresa');
+Route::get('/convenios/{id}/generar-pdf', [Convenios::class, 'generatePdfForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:generatePdf'])
+    ->name('convenios.generar_pdf');
 
-Route::get('/convenios/{id}/validar-firma', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.validar_firma', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:validateSignature'])->name('convenios.validar_firma');
+Route::post('/convenios/{id}/generar-pdf', [Convenios::class, 'storeGeneratedPdf'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:generatePdf'])
+    ->name('convenios.generar_pdf.store');
 
-Route::get('/convenios/{id}/firmar-centro', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.firmar_centro', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:signCenter'])->name('convenios.firmar_centro');
+Route::get('/convenios/{id}/firmar-empresa', [Convenios::class, 'firmEmpresaForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:firmEmpresa'])
+    ->name('convenios.firmar_empresa');
 
-Route::get('/convenios/{id}/descargar-firmado', function ($id) {
-    $convenio = Convenio::with('empresa')->findOrFail($id);
-    return view('convenios.actions.descargar_firmado', compact('convenio'));
-})->middleware(['auth', 'verified', 'convenio.access:downloadFinal'])->name('convenios.descargar_firmado');
+Route::post('/convenios/{id}/firmar-empresa', [Convenios::class, 'uploadFirmadoEmpresa'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:firmEmpresa'])
+    ->name('convenios.firmar_empresa.store');
+
+Route::post('/convenios/{id}/reportar-error-empresa', [Convenios::class, 'reportarErrorEmpresa'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:firmEmpresa'])
+    ->name('convenios.reportar_error_empresa');
+
+Route::get('/convenios/{id}/validar-firma', [Convenios::class, 'validarFirmaForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:validateSignature'])
+    ->name('convenios.validar_firma');
+
+Route::post('/convenios/{id}/validar-firma', [Convenios::class, 'validarFirmaEmpresa'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:validateSignature'])
+    ->name('convenios.validar_firma.store');
+
+Route::get('/convenios/{id}/firmar-centro', [Convenios::class, 'firmarCentroForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:signCenter'])
+    ->name('convenios.firmar_centro');
+
+Route::post('/convenios/{id}/firmar-centro', [Convenios::class, 'subirFirmaCentro'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:signCenter'])
+    ->name('convenios.firmar_centro.store');
+
+Route::post('/convenios/{id}/firmar-centro/rechazar', [Convenios::class, 'rechazarFirmaCentro'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:signCenter'])
+    ->name('convenios.firmar_centro.rechazar');
+
+Route::get('/convenios/{id}/descargar-firmado', [Convenios::class, 'descargarFirmadoForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:downloadFinal'])
+    ->name('convenios.descargar_firmado');
+
+Route::get('/convenios/{id}/documentos/{documentoId}/descargar', [Convenios::class, 'downloadDocument'])
+    ->whereNumber('id')
+    ->whereNumber('documentoId')
+    ->middleware(['auth', 'verified', 'convenio.access:view'])
+    ->name('convenios.documentos.descargar');

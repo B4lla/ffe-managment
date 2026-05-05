@@ -86,6 +86,7 @@
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefono</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicacion</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Alta</th>
+								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
 							</tr>
 						</thead>
 						<tbody class="bg-white divide-y divide-gray-100">
@@ -111,10 +112,15 @@
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->telefono1 ?? $empresa->telefono2 ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ trim(($empresa->municipio ?? '').' '.($empresa->provincia ?? '')) ?: '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ optional($empresa->created_at)->format('d/m/Y') ?? '-' }}</td>
+									<td class="px-4 py-3 text-sm text-gray-700">
+										<a href="{{ route('empresas.contactos.index', $empresa->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+											Ver contactos
+										</a>
+									</td>
 								</tr>
 							@empty
 								<tr>
-									<td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500">
+									<td colspan="10" class="px-4 py-8 text-center text-sm text-gray-500">
 										No hay empresas para los filtros seleccionados.
 									</td>
 								</tr>

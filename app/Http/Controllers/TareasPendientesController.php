@@ -36,6 +36,8 @@ class TareasPendientesController extends Controller
                     'datos' => ['convenios.datos', 'Meter datos iniciales'],
                     'insertar' => ['convenios.insertar', 'Insertar convenio'],
                     'crear' => ['convenios.insertar', 'Insertar convenio'],
+                    'descargar convenio firmado' => ['convenios.descargar_firmado', 'Descargar convenio firmado'],
+                    'descargar firmado' => ['convenios.descargar_firmado', 'Descargar convenio firmado'],
                     'ver convenio' => ['convenios.show', 'Ver convenio'],
                     'detalle' => ['convenios.show', 'Ver detalle'],
                 ];

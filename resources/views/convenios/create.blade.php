@@ -222,7 +222,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Estado inicial</label>
-                                <input type="text" value="borrador" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
+                                <input type="text" value="Pendiente de secretaria (o en vigor si indicas fecha de firma)" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
                             </div>
                         </div>
                     </div>

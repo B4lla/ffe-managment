@@ -30,6 +30,14 @@ class EnsureConvenioAccess
             abort(403);
         }
 
+        if (in_array($ability, ['create', 'store'], true)) {
+            if (in_array($role, ['coordinador ffe', 'profesor tutor', 'secretaria'], true)) {
+                return $next($request);
+            }
+
+            abort(403);
+        }
+
         if (! $convenio instanceof Convenio) {
             abort(404);
         }
@@ -48,7 +56,6 @@ class EnsureConvenioAccess
 
         $allowed = match ($ability) {
             'view' => ['direccion', 'coordinador ffe', 'profesor tutor', 'profesor', 'secretaria', 'empresa externa'],
-            'create', 'store' => ['coordinador ffe', 'profesor tutor', 'secretaria'],
             'editInitial' => ['coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'],
             'generatePdf' => ['secretaria'],
             'downloadProvisional' => ['direccion', 'coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'],
