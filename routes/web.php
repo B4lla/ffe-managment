@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Usuarios;
+use App\Http\Controllers\Roles;
 use App\Http\Controllers\Convenios;
 use App\Http\Controllers\InformesController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,47 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios', [Usuarios::class, 'index'])
         ->middleware(['verified', 'role.access:Administrador'])
         ->name('usuarios.index');
+
+    Route::get('/roles', [Roles::class, 'index'])
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.index');
+
+    Route::get('/roles/crear', [Roles::class, 'create'])
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.create');
+
+    Route::post('/roles', [Roles::class, 'store'])
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.store');
+
+    Route::get('/roles/{id}/editar', [Roles::class, 'edit'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.edit');
+
+    Route::put('/roles/{id}', [Roles::class, 'update'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.update');
+
+    Route::delete('/roles/{id}', [Roles::class, 'destroy'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('roles.destroy');
+    Route::get('/usuarios/{id}/editar', [Usuarios::class, 'edit'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('usuarios.edit');
+
+    Route::put('/usuarios/{id}', [Usuarios::class, 'update'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('usuarios.update');
+
+    Route::delete('/usuarios/{id}', [Usuarios::class, 'destroy'])
+        ->whereNumber('id')
+        ->middleware(['verified', 'role.access:Administrador'])
+        ->name('usuarios.destroy');
 
 
     Route::get('/convenios', [Convenios::class, 'index'])

@@ -26,6 +26,8 @@ class User extends Authenticatable
         'empresa_id',
         'rol_id',
         'foto_url',
+        'oauth_provider',
+        'oauth_id',
         'activo',
     ];
     

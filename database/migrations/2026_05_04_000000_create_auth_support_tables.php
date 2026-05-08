@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('roles') && Schema::hasTable('convenios') && Schema::hasTable('documentos_pdf')) {
+            return;
+        }
+
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100)->unique();
@@ -36,33 +40,33 @@ return new class extends Migration
         Schema::create('empresas', function (Blueprint $table) {
             $table->id();
             $table->string('nombre_razon_social', 300);
-            $table->string('dni_cif', 512);
+            $table->mediumText('dni_cif');
             $table->char('dni_cif_hash', 64)->unique();
             $table->text('actividad')->nullable();
             $table->enum('categoria', ['ayuntamiento', 'colegios_institutos', 'empresa'])->nullable();
             $table->enum('tipo', ['verde', 'amarilla', 'roja'])->nullable();
-            $table->string('email', 512)->nullable();
+            $table->mediumText('email')->nullable();
             $table->char('email_hash', 64)->nullable()->index();
-            $table->string('telefono1', 512)->nullable();
+            $table->mediumText('telefono1')->nullable();
             $table->char('telefono1_hash', 64)->nullable()->index();
-            $table->string('telefono2', 512)->nullable();
+            $table->mediumText('telefono2')->nullable();
             $table->char('telefono2_hash', 64)->nullable()->index();
-            $table->string('provincia', 512)->nullable();
-            $table->string('municipio', 512)->nullable();
-            $table->text('direccion')->nullable();
-            $table->string('codigo_postal', 512)->nullable();
+            $table->mediumText('provincia')->nullable();
+            $table->mediumText('municipio')->nullable();
+            $table->mediumText('direccion')->nullable();
+            $table->mediumText('codigo_postal')->nullable();
             $table->timestamps();
         });
 
         Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            $table->text('nombre');
-            $table->text('email');
-            $table->string('dni_cif', 512)->nullable();
+            $table->mediumText('nombre');
+            $table->mediumText('email');
+            $table->mediumText('dni_cif')->nullable();
             $table->char('email_hash', 64)->unique();
             $table->string('password');
             $table->rememberToken();
-            $table->text('foto_url')->nullable();
+            $table->mediumText('foto_url')->nullable();
             $table->boolean('activo')->default(true);
             $table->foreignId('departamento_id')->nullable()->constrained('departamentos')->nullOnDelete();
             $table->foreignId('empresa_id')->nullable()->constrained('empresas')->nullOnDelete();
@@ -104,30 +108,30 @@ return new class extends Migration
         Schema::create('centros_trabajo', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->cascadeOnDelete();
-            $table->text('direccion')->nullable();
-            $table->string('municipio', 512)->nullable();
-            $table->string('provincia', 512)->nullable();
-            $table->string('codigo_postal', 512)->nullable();
+            $table->mediumText('direccion')->nullable();
+            $table->mediumText('municipio')->nullable();
+            $table->mediumText('provincia')->nullable();
+            $table->mediumText('codigo_postal')->nullable();
             $table->timestamps();
         });
 
         Schema::create('representantes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->cascadeOnDelete();
-            $table->string('nif', 512)->nullable();
-            $table->string('nombre', 512)->nullable();
-            $table->string('apellido1', 512)->nullable();
-            $table->string('apellido2', 512)->nullable();
+            $table->mediumText('nif')->nullable();
+            $table->mediumText('nombre')->nullable();
+            $table->mediumText('apellido1')->nullable();
+            $table->mediumText('apellido2')->nullable();
             $table->timestamps();
         });
 
         Schema::create('tutores_empresa', function (Blueprint $table) {
             $table->id();
             $table->foreignId('empresa_id')->constrained('empresas')->cascadeOnDelete();
-            $table->string('nombre_completo', 512);
-            $table->string('dni', 512)->nullable();
-            $table->string('email', 512)->nullable();
-            $table->string('telefono', 512)->nullable();
+            $table->mediumText('nombre_completo');
+            $table->mediumText('dni')->nullable();
+            $table->mediumText('email')->nullable();
+            $table->mediumText('telefono')->nullable();
             $table->timestamps();
         });
 
@@ -137,12 +141,12 @@ return new class extends Migration
             $table->foreignId('empresa_id')->constrained('empresas')->cascadeOnDelete();
             $table->foreignId('profesor_id')->nullable()->constrained('usuarios')->nullOnDelete();
             $table->foreignId('representante_id')->nullable()->constrained('representantes')->nullOnDelete();
-            $table->text('resp_gestion_nombre')->nullable();
-            $table->text('resp_gestion_telefono')->nullable();
-            $table->text('resp_gestion_email')->nullable();
-            $table->text('resp_ies_nombre')->nullable();
-            $table->text('resp_ies_telefono')->nullable();
-            $table->text('resp_ies_email')->nullable();
+            $table->mediumText('resp_gestion_nombre')->nullable();
+            $table->mediumText('resp_gestion_telefono')->nullable();
+            $table->mediumText('resp_gestion_email')->nullable();
+            $table->mediumText('resp_ies_nombre')->nullable();
+            $table->mediumText('resp_ies_telefono')->nullable();
+            $table->mediumText('resp_ies_email')->nullable();
             $table->date('fecha_firma')->nullable();
             $table->string('estado', 50)->default('borrador');
             $table->string('horario_practicas', 255)->nullable();

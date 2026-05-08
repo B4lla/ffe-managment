@@ -15,6 +15,7 @@
                     $isAssignedTutor = $user && isset($convenio->profesor_id) && $user->id === $convenio->profesor_id;
                     $canManageConvenio = in_array($role, ['administrador', 'coordinador ffe', 'profesor tutor', 'secretaria', 'direccion', 'empresa externa'], true);
                     $canDeleteConvenio = in_array($role, ['administrador', 'coordinador ffe'], true);
+                    $hasFinalPdf = $convenio->documentos->first(fn ($documento) => $documento->tipo === 'firmado_centro' && ! $documento->es_erroneo) !== null;
                 @endphp
 
                 @if (session('status') || session('success'))
@@ -28,7 +29,11 @@
                         <a href="{{ route('convenios.datos', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-green-600 text-black rounded-md">Meter datos iniciales</a>
                     @endif
 
-                    @if(($isAdmin || $role === 'secretaria') && in_array($convenio->estado, ['pendiente_secretaria', 'nuevo_solicitado', 'borrador'], true))
+                    @if($canManageConvenio && ($isAdmin || in_array($role, ['coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'], true)))
+                        <a href="{{ route('convenios.editar_tutor', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-blue-600 text-black rounded-md">Editar tutor</a>
+                    @endif
+
+                    @if(($isAdmin || $role === 'secretaria') && (in_array($convenio->estado, ['pendiente_secretaria', 'nuevo_solicitado', 'borrador'], true) || ($convenio->estado === 'en_vigor' && ! $hasFinalPdf)))
                         <a href="{{ route('convenios.generar_pdf', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-yellow-600 text-black rounded-md">Generar/Subir PDF inicial</a>
                     @endif
 
@@ -44,7 +49,7 @@
                         <a href="{{ route('convenios.firmar_centro', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-red-600 text-black rounded-md">Firmar por el centro</a>
                     @endif
 
-                    @if(($isAdmin || in_array($role, ['empresa externa', 'direccion'], true)) && ($convenio->estado === 'en_vigor'))
+                    @if(($isAdmin || in_array($role, ['empresa externa', 'direccion'], true)) && $convenio->estado === 'en_vigor' && $hasFinalPdf)
                         <a href="{{ route('convenios.descargar_firmado', $convenio->id) }}" class="inline-flex items-center px-3 py-1 bg-gray-600 text-black rounded-md">Descargar convenio firmado</a>
                     @endif
 
@@ -93,6 +98,8 @@
                             <div><strong>Fecha caducidad:</strong> {{ optional($convenio->fecha_caducidad)->format('d/m/Y') ?? '-' }}</div>
                             <div><strong>Vigencia:</strong> {{ \App\Models\Convenio::vigenciaLabel($convenio->vigencia_key) }}</div>
                             <div><strong>Estado:</strong> {{ \App\Models\Convenio::estadoLabel($convenio->estado) }}</div>
+                            <div><strong>Tutor asignado:</strong> {{ $convenio->profesor?->nombre ?? '-' }}</div>
+                            <div><strong>Email tutor:</strong> {{ $convenio->profesor?->email ?? '-' }}</div>
                             <div class="mt-3"><strong>Observaciones:</strong>
                                 <div class="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{{ $convenio->observaciones ?? '-' }}</div>
                             </div>
@@ -118,13 +125,25 @@
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-100">
                                     @foreach($convenio->documentos as $documento)
+                                        @php
+                                            $canDownloadDoc = $isAdmin || match ($documento->tipo) {
+                                                'provisional' => in_array($role, ['secretaria', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true),
+                                                'firmado_empresa' => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor'], true),
+                                                'firmado_centro' => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true),
+                                                default => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'], true),
+                                            };
+                                        @endphp
                                         <tr>
                                             <td class="px-3 py-2 text-sm text-gray-800">{{ \App\Models\DocumentoPdf::tipoLabel($documento->tipo) }}</td>
                                             <td class="px-3 py-2 text-sm text-gray-700">{{ $documento->estado_doc }}</td>
                                             <td class="px-3 py-2 text-sm text-gray-700">{{ optional($documento->created_at)->format('d/m/Y H:i') }}</td>
                                             <td class="px-3 py-2 text-sm text-gray-700">{{ $documento->es_erroneo ? ($documento->motivo_error ?: 'Si') : '-' }}</td>
                                             <td class="px-3 py-2 text-sm">
-                                                <a href="{{ route('convenios.documentos.descargar', [$convenio->id, $documento->id]) }}" class="text-indigo-600 hover:underline">Descargar</a>
+                                                @if($canDownloadDoc)
+                                                    <a href="{{ route('convenios.documentos.descargar', [$convenio->id, $documento->id]) }}" class="text-indigo-600 hover:underline">Descargar</a>
+                                                @else
+                                                    <span class="text-gray-400">Sin acceso</span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @endforeach

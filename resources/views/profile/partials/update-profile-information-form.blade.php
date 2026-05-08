@@ -13,9 +13,24 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
         @method('patch')
+
+        <div class="flex items-center gap-4">
+            <div class="h-20 w-20 overflow-hidden rounded-full bg-gray-100 border border-gray-200">
+                @if($user->foto_url)
+                    <img src="{{ $user->foto_url }}" alt="Foto de perfil" class="h-full w-full object-cover">
+                @else
+                    <div class="flex h-full w-full items-center justify-center text-xl font-semibold text-gray-500">
+                        {{ strtoupper(mb_substr($user->nombre ?? $user->email ?? 'U', 0, 1)) }}
+                    </div>
+                @endif
+            </div>
+            <div class="text-sm text-gray-600">
+                Sube una imagen o pega una URL. Si subes archivo, se usa ese archivo.
+            </div>
+        </div>
 
         <div>
             <x-input-label for="nombre" :value="__('Name')" />
@@ -45,6 +60,18 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+        <div>
+            <x-input-label for="foto_archivo" value="Subir foto de perfil" />
+            <input id="foto_archivo" name="foto_archivo" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm text-gray-700">
+            <x-input-error class="mt-2" :messages="$errors->get('foto_archivo')" />
+        </div>
+
+        <div>
+            <x-input-label for="foto_url" value="URL de foto de perfil" />
+            <x-text-input id="foto_url" name="foto_url" type="url" class="mt-1 block w-full" :value="old('foto_url', $user->foto_url)" placeholder="https://ejemplo.com/foto.jpg" />
+            <x-input-error class="mt-2" :messages="$errors->get('foto_url')" />
         </div>
 
         <div class="flex items-center gap-4">

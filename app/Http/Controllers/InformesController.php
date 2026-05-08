@@ -176,15 +176,16 @@ class InformesController extends Controller
             ];
         }
 
-        $rows = $this->buildCourseRows($department->id, $cycles->pluck('id')->all(), (int) $filters['curso_anio']);
+        $courseCycles = $this->cyclesForCourse($cycles, (int) $filters['curso_anio']);
+        $rows = $this->buildConvenioCycleRows($department->id, $courseCycles->pluck('id')->all());
 
         return [
             'type' => 'curso_familia',
             'title' => 'Vista de empresas por curso de una familia',
             'subtitle' => $department->nombre.' · Curso '.$filters['curso_anio'],
-            'columns' => $this->formatColumns($cycles),
+            'columns' => $this->formatColumns($courseCycles),
             'rows' => $rows,
-            'message' => $rows === [] ? 'No hay empresas con alumnado asignado en ese curso.' : null,
+            'message' => $rows === [] ? 'No hay empresas con convenios vinculados a ese curso.' : null,
         ];
     }
 
@@ -211,38 +212,24 @@ class InformesController extends Controller
         return $this->aggregateRows($rawRows, $cycleIds, $departmentId);
     }
 
-    private function buildCourseRows(int $departmentId, array $cycleIds, int $courseYear): array
+    private function cyclesForCourse(Collection $cycles, int $courseYear): Collection
     {
-        $rawRows = DB::table('convenios as c')
-            ->join('empresas as e', 'e.id', '=', 'c.empresa_id')
-            ->join('alumno_convenio as ac', 'ac.convenio_id', '=', 'c.id')
-            ->join('alumnos as a', 'a.id', '=', 'ac.alumno_id')
-            ->join('cursos as cu', 'cu.id', '=', 'a.curso_id')
-            ->join('ciclos as ci', 'ci.id', '=', 'a.ciclo_id')
-            ->where('ci.departamento_id', $departmentId)
-            ->where('cu.anio', $courseYear)
-            ->whereIn('a.ciclo_id', $cycleIds)
-            ->select([
-                'e.id as empresa_id',
-                'e.nombre_razon_social',
-                'c.id as convenio_id',
-                'c.profesor_id',
-                'c.observaciones',
-                DB::raw('a.ciclo_id as ciclo_id'),
-                DB::raw('COUNT(ac.id) as plazas'),
-            ])
-            ->groupBy([
-                'e.id',
-                'e.nombre_razon_social',
-                'c.id',
-                'c.profesor_id',
-                'c.observaciones',
-                'a.ciclo_id',
-            ])
-            ->orderBy('e.nombre_razon_social')
-            ->get();
+        $cycleIds = $cycles->pluck('id')->map(fn ($id) => (int) $id)->all();
 
-        return $this->aggregateRows($rawRows, $cycleIds, $departmentId);
+        $courseCycleIds = DB::table('cursos')
+            ->where('anio', $courseYear)
+            ->whereIn('ciclo_id', $cycleIds)
+            ->pluck('ciclo_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($courseCycleIds === []) {
+            return $cycles;
+        }
+
+        return $cycles->whereIn('id', $courseCycleIds)->values();
     }
 
     private function aggregateRows(Collection $rawRows, array $cycleIds, int $departmentId): array

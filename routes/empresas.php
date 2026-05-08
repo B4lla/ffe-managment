@@ -13,31 +13,25 @@ Route::middleware(['auth', 'verified'])
 
         Route::post('/', [Empresas::class, 'store'])->middleware('empresa.access:store')->name('store');
 
-        Route::get('/{empresa}', function ($empresa) {
-            return "Detalle empresa {$empresa}";
-        })->middleware('empresa.access:view')->name('show');
+        Route::get('/{empresa}', [Empresas::class, 'show'])->middleware('empresa.access:view')->name('show');
 
-        Route::get('/{empresa}/editar', function ($empresa) {
-            return "Formulario editar empresa {$empresa}";
-        })->middleware('empresa.access:edit')->name('edit');
+        Route::get('/{empresa}/editar', [Empresas::class, 'edit'])->middleware('empresa.access:edit')->name('edit');
 
-        Route::put('/{empresa}', function ($empresa) {
-            return "Actualizar empresa {$empresa}";
-        })->middleware('empresa.access:update')->name('update');
+        Route::put('/{empresa}', [Empresas::class, 'update'])->middleware('empresa.access:update')->name('update');
 
-        Route::delete('/{empresa}', function ($empresa) {
-            return "Eliminar empresa {$empresa}";
-        })->middleware('empresa.access:delete')->name('destroy');
+        Route::delete('/{empresa}', [Empresas::class, 'destroy'])->middleware('empresa.access:delete')->name('destroy');
 
         Route::get('/{empresa}/contactos', [Empresas::class, 'contactosIndex'])
             ->middleware('empresa.access:contacts')
             ->name('contactos.index');
 
+        Route::get('/buscar', [Empresas::class, 'search'])
+            ->middleware('empresa.access:viewAny')
+            ->name('search');
+
         Route::post('/{empresa}/contactos', [Empresas::class, 'contactosStore'])
             ->middleware('empresa.access:contacts')
             ->name('contactos.store');
 
-        Route::get('/exportar', function () {
-            return 'Exportar empresas';
-        })->middleware('empresa.access:export')->name('export');
+        Route::get('/exportar', [Empresas::class, 'export'])->middleware('empresa.access:export')->name('export');
     });

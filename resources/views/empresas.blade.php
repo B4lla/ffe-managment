@@ -85,6 +85,7 @@
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefono</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicacion</th>
+								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tareas pendientes</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Alta</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
 							</tr>
@@ -111,16 +112,34 @@
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->email ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $empresa->telefono1 ?? $empresa->telefono2 ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ trim(($empresa->municipio ?? '').' '.($empresa->provincia ?? '')) ?: '-' }}</td>
+									<td class="px-4 py-3 text-sm text-gray-700">
+										@php($tareasCount = $tareasPendientesPorEmpresa[$empresa->id] ?? 0)
+										@if($tareasCount > 0)
+											<a href="{{ route('empresas.show', $empresa->id) }}" class="inline-flex items-center px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold hover:bg-yellow-200">
+												{{ $tareasCount }}
+											</a>
+										@else
+											<span class="text-gray-400">0</span>
+										@endif
+									</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ optional($empresa->created_at)->format('d/m/Y') ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">
-										<a href="{{ route('empresas.contactos.index', $empresa->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+										<a href="{{ route('empresas.contactos.index', $empresa->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 mr-2">
 											Ver contactos
 										</a>
+										<a href="{{ route('empresas.show', $empresa->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 mr-2">
+											Ver
+										</a>
+										@if($puede_crear)
+											<a href="{{ route('empresas.edit', $empresa->id) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100">
+												Editar
+											</a>
+										@endif
 									</td>
 								</tr>
 							@empty
 								<tr>
-									<td colspan="10" class="px-4 py-8 text-center text-sm text-gray-500">
+									<td colspan="11" class="px-4 py-8 text-center text-sm text-gray-500">
 										No hay empresas para los filtros seleccionados.
 									</td>
 								</tr>

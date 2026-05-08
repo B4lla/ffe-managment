@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 
 class Convenio extends Model
@@ -82,10 +83,19 @@ class Convenio extends Model
 
     public function latestValidDocument(string $tipo): ?DocumentoPdf
     {
-        return $this->documentos()
-            ->where('tipo', $tipo)
-            ->where('es_erroneo', false)
-            ->first();
+        $baseQuery = $this->documentos()->where('es_erroneo', false);
+
+        if (Schema::hasColumn('documentos_pdf', 'tipo')) {
+            $documento = (clone $baseQuery)
+                ->where('tipo', $tipo)
+                ->first();
+
+            if ($documento) {
+                return $documento;
+            }
+        }
+
+        return $baseQuery->first();
     }
 
     public static function vigenciaOptions(): array

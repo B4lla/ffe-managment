@@ -33,6 +33,15 @@
                 <div class="rounded-md border border-gray-200 p-4 mb-6">
                     <h4 class="text-sm font-semibold text-gray-800 mb-3">Registrar nuevo contacto</h4>
 
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700">Buscar previas</label>
+                        <div class="flex gap-2 mt-1">
+                            <input id="buscar_q" type="text" placeholder="Buscar por nombre, email o teléfono" class="block w-full border-gray-300 rounded-md shadow-sm px-3 py-2">
+                            <button id="buscar_btn" class="inline-flex items-center px-4 py-2 bg-gray-100 rounded-md">Buscar</button>
+                        </div>
+                        <div id="buscar_resultados" class="mt-3"></div>
+                    </div>
+
                     <form method="POST" action="{{ route('empresas.contactos.store', $empresa->id) }}" class="space-y-4">
                         @csrf
 
@@ -65,6 +74,72 @@
                         </div>
                     </form>
                 </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const btn = document.getElementById('buscar_btn');
+                        const input = document.getElementById('buscar_q');
+                        const resultados = document.getElementById('buscar_resultados');
+
+                        async function doSearch() {
+                            const q = input.value.trim();
+                            resultados.innerHTML = '';
+                            if (q.length < 2) {
+                                resultados.innerHTML = '<div class="text-sm text-gray-500">Introduce al menos 2 caracteres.</div>';
+                                return;
+                            }
+
+                            resultados.innerHTML = '<div class="text-sm text-gray-500">Buscando...</div>';
+
+                            try {
+                                const res = await fetch('{{ route('empresas.search') }}?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
+                                if (! res.ok) throw new Error('Error buscando');
+                                const data = await res.json();
+                                renderResults(data);
+                            } catch (e) {
+                                resultados.innerHTML = '<div class="text-sm text-red-600">Error al buscar.</div>';
+                            }
+                        }
+
+                        function renderResults(data) {
+                            const { empresas, convenios } = data;
+                            let html = '';
+                            if ((empresas || []).length === 0 && (convenios || []).length === 0) {
+                                html = '<div class="text-sm text-gray-500">No se encontraron coincidencias.</div>';
+                                resultados.innerHTML = html;
+                                return;
+                            }
+
+                            if ((empresas || []).length) {
+                                html += '<div class="mb-3"><strong>Empresas encontradas:</strong><ul class="mt-2 list-disc pl-5 space-y-1">';
+                                empresas.forEach(e => {
+                                    html += `<li class="text-sm"><a class="text-indigo-600 hover:underline" href="/empresas/${e.id}">${escapeHtml(e.nombre_razon_social)}</a> — ${escapeHtml(e.email||'-')} ${escapeHtml(e.telefono1||'')}</li>`;
+                                });
+                                html += '</ul></div>';
+                            }
+
+                            if ((convenios || []).length) {
+                                html += '<div class="mb-3"><strong>Convenios relacionados:</strong><ul class="mt-2 list-disc pl-5 space-y-1">';
+                                convenios.forEach(c => {
+                                    html += `<li class="text-sm">Convenio #${c.id} — <a class="text-indigo-600 hover:underline" href="/convenios/${c.id}">${escapeHtml(c.empresa_nombre||'Empresa')}</a> — Estado: ${escapeHtml(c.estado||'-')}</li>`;
+                                });
+                                html += '</ul></div>';
+                            }
+
+                            resultados.innerHTML = html;
+                        }
+
+                        function escapeHtml(str) {
+                            if (!str) return '';
+                            return String(str).replace(/[&<>"']/g, function (m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":"&#39;"}[m]; });
+                        }
+
+                        btn.addEventListener('click', function (ev) {
+                            ev.preventDefault();
+                            doSearch();
+                        });
+                    });
+                </script>
 
                 <div>
                     <h4 class="text-sm font-semibold text-gray-800 mb-3">Historial de contactos</h4>

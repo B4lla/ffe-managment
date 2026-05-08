@@ -10,6 +10,7 @@ use App\Models\Representante;
 use App\Models\TareaPendiente;
 use App\Models\Tutor;
 use App\Models\User;
+use App\Services\ResendTareaPendienteMailer;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,7 +63,7 @@ class Convenios extends Controller
 	    $user = Auth::user();
 	    $role = $this->currentRoleName($user);
 	
-	    $query = Convenio::with(['empresa.ultimoContactoFamilia.departamento', 'empresa.ultimoContactoFamilia.profesor'])
+	    $query = Convenio::with(['empresa.ultimoContactoFamilia.departamento', 'empresa.ultimoContactoFamilia.profesor', 'profesor'])
 	        ->whereHas('empresa', function ($q) use ($request) {
 	            if ($request->filled('categoria')) {
 	                $q->where('categoria', (string) $request->input('categoria'));
@@ -97,7 +98,7 @@ class Convenios extends Controller
 	            }
 	        });
 	    } elseif ($role === 'direccion') {
-	        $query->whereIn('estado', ['pendiente_firma_direccion', 'firmado_empresa', 'en_vigor']);
+	        $query->whereIn('estado', ['pendiente_firma_direccion', 'en_vigor']);
 	    } elseif ($role === 'empresa externa' && $user?->empresa_id) {
 	        $query->where('empresa_id', $user->empresa_id);
 	    }
@@ -165,6 +166,8 @@ class Convenios extends Controller
 			->with(['empresa', 'profesor', 'representante'])
 			->findOrFail($id);
 
+		$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_datos', 'pendiente_secretaria']);
+
 		$departamentos = Departamento::all();
 		$profesores = User::query()
 			->whereNotNull('departamento_id')
@@ -187,9 +190,41 @@ class Convenios extends Controller
 		return view('convenios.actions.meter_datos', compact('convenio', 'departamentos', 'tutoresByDept', 'departamentoActual'));
 	}
 
+	public function editTutorForm(int $id)
+	{
+		$convenio = Convenio::query()
+			->with(['empresa', 'profesor', 'representante'])
+			->findOrFail($id);
+
+		$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_datos', 'pendiente_secretaria', 'pendiente_validacion_tutor', 'firmado_empresa']);
+
+		$departamentos = Departamento::all();
+		$profesores = User::query()
+			->whereNotNull('departamento_id')
+			->whereHas('rol', fn ($q) => $q->where('nombre', 'Profesor tutor'))
+			->get(['id', 'nombre', 'departamento_id']);
+
+		$tutoresByDept = [];
+		foreach ($profesores as $p) {
+			$tutoresByDept[$p->departamento_id][] = [
+				'id' => $p->id,
+				'name' => $p->nombre,
+			];
+		}
+
+		$departamentoActual = DB::table('empresa_contacto_familia')
+			->where('empresa_id', $convenio->empresa_id)
+			->latest('id')
+			->value('departamento_id');
+
+		return view('convenios.actions.editar_tutor', compact('convenio', 'departamentos', 'tutoresByDept', 'departamentoActual'));
+	}
+
 	public function updateInitial(Request $request, int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'representante'])->findOrFail($id);
+
+		$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_datos', 'pendiente_secretaria']);
 
 		$validated = $request->validate([
 			'responsable_nombre' => 'nullable|string|max:200',
@@ -286,9 +321,60 @@ class Convenios extends Controller
 		return redirect()->route('convenios.show', $convenio->id)->with('status', 'Datos iniciales guardados. El convenio queda pendiente de secretaria.');
 	}
 
+	public function updateTutor(Request $request, int $id)
+	{
+		$convenio = Convenio::query()->with(['empresa', 'representante'])->findOrFail($id);
+
+		$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_datos', 'pendiente_secretaria', 'pendiente_validacion_tutor', 'firmado_empresa']);
+
+		$validated = $request->validate([
+			'departamento_id' => 'nullable|exists:departamentos,id',
+			'tutor_id' => 'nullable|exists:usuarios,id',
+			'tutor_telefono' => 'nullable|string|max:20',
+			'tutor_email' => 'nullable|email|max:150',
+		]);
+
+		DB::transaction(function () use ($convenio, $validated) {
+			$profesor = ! empty($validated['tutor_id'])
+				? User::query()->find($validated['tutor_id'])
+				: null;
+
+			$convenio->update([
+				'profesor_id' => $validated['tutor_id'] ?? null,
+				'resp_ies_nombre' => $profesor?->nombre,
+				'resp_ies_telefono' => $validated['tutor_telefono'] ?? null,
+				'resp_ies_email' => $validated['tutor_email'] ?? null,
+			]);
+
+			if (! empty($validated['departamento_id'])) {
+				DB::table('empresa_contacto_familia')->updateOrInsert(
+					[
+						'empresa_id' => $convenio->empresa_id,
+						'departamento_id' => $validated['departamento_id'],
+					],
+					[
+						'profesor_id' => $validated['tutor_id'] ?? null,
+						'updated_at' => now(),
+						'created_at' => now(),
+					]
+				);
+			}
+		});
+
+		$this->crearTareaTutor($convenio, 'Asignacion convenio', 'Se te ha asignado un convenio. Revisa los detalles.');
+
+		return redirect()->route('convenios.show', $convenio->id)->with('status', 'Tutor asignado/actualizado correctamente.');
+	}
+
 	public function generatePdfForm(int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'documentos'])->findOrFail($id);
+
+		if ($convenio->estado === 'en_vigor') {
+			abort_unless($convenio->latestValidDocument('firmado_centro') === null, 403);
+		} else {
+			$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_secretaria']);
+		}
 
 		return view('convenios.actions.generar_pdf', compact('convenio'));
 	}
@@ -297,28 +383,21 @@ class Convenios extends Controller
 	{
 		$convenio = Convenio::query()->with('empresa')->findOrFail($id);
 
+		if ($convenio->estado === 'en_vigor') {
+			abort_unless($convenio->latestValidDocument('firmado_centro') === null, 403);
+		} else {
+			$this->ensureEstado($convenio, ['borrador', 'nuevo_solicitado', 'pendiente_secretaria']);
+		}
+
 		$validated = $request->validate([
 			'pdf' => 'required|file|mimes:pdf|max:10240',
-			'activar_directamente' => 'nullable|boolean',
-			'fecha_firma' => 'nullable|date',
 		]);
 
-		DB::transaction(function () use ($request, $convenio, $validated) {
-			$activar = (bool) ($validated['activar_directamente'] ?? false);
-			$this->guardarDocumento($convenio, $request->file('pdf'), $activar ? 'firmado_centro' : 'provisional');
-
-			if ($activar) {
-				$convenio->update([
-					'estado' => 'en_vigor',
-					'fecha_firma' => $validated['fecha_firma'] ?? now()->toDateString(),
-				]);
-				$this->completarTareas($convenio, ['Generar PDF']);
-				$this->crearTareasEmpresa($convenio, 'Descargar convenio firmado', 'El convenio ya esta en vigor y puede descargarse.');
-			} else {
-				$convenio->update(['estado' => 'pendiente_firma_empresa']);
-				$this->completarTareas($convenio, ['Generar PDF']);
-				$this->crearTareasEmpresa($convenio, 'Firmar empresa', 'Descarga el PDF inicial, firmalo y vuelve a subirlo.');
-			}
+		DB::transaction(function () use ($request, $convenio) {
+			$this->guardarDocumento($convenio, $request->file('pdf'), 'provisional');
+			$convenio->update(['estado' => 'pendiente_firma_empresa']);
+			$this->completarTareas($convenio, ['Generar PDF']);
+			$this->crearTareasEmpresa($convenio, 'Firmar empresa', 'Descarga el PDF inicial, firmalo y vuelve a subirlo.');
 		});
 
 		return redirect()->route('convenios.show', $convenio->id)->with('status', 'PDF guardado y estado actualizado.');
@@ -327,6 +406,7 @@ class Convenios extends Controller
 	public function firmEmpresaForm(int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'documentos'])->findOrFail($id);
+		$this->ensureEstado($convenio, ['pendiente_firma_empresa']);
 		$provisional = $convenio->latestValidDocument('provisional');
 
 		return view('convenios.actions.descargar_firmar_empresa', compact('convenio', 'provisional'));
@@ -360,9 +440,17 @@ class Convenios extends Controller
 			'tipo_documento' => 'nullable|in:provisional,firmado_centro',
 		]);
 
-		DB::transaction(function () use ($convenio, $validated) {
-			$tipo = $validated['tipo_documento'] ?? 'provisional';
+		$tipo = $validated['tipo_documento'] ?? 'provisional';
+		if ($tipo === 'firmado_centro') {
+			$this->ensureEstado($convenio, ['en_vigor']);
+		} else {
+			$this->ensureEstado($convenio, ['pendiente_firma_empresa']);
+		}
+
+		DB::transaction(function () use ($convenio, $validated, $tipo) {
 			$documento = $convenio->latestValidDocument($tipo);
+			abort_unless($documento, 404);
+
 			if ($documento) {
 				$documento->update([
 					'es_erroneo' => true,
@@ -387,6 +475,7 @@ class Convenios extends Controller
 	public function validarFirmaForm(int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'documentos'])->findOrFail($id);
+		$this->ensureEstado($convenio, ['pendiente_validacion_tutor', 'firmado_empresa']);
 		$firmadoEmpresa = $convenio->latestValidDocument('firmado_empresa');
 
 		return view('convenios.actions.validar_firma', compact('convenio', 'firmadoEmpresa'));
@@ -430,6 +519,7 @@ class Convenios extends Controller
 	public function firmarCentroForm(int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'documentos'])->findOrFail($id);
+		$this->ensureEstado($convenio, ['pendiente_firma_direccion']);
 		$firmadoEmpresa = $convenio->latestValidDocument('firmado_empresa');
 
 		return view('convenios.actions.firmar_centro', compact('convenio', 'firmadoEmpresa'));
@@ -489,7 +579,9 @@ class Convenios extends Controller
 	public function descargarFirmadoForm(int $id)
 	{
 		$convenio = Convenio::query()->with(['empresa', 'documentos'])->findOrFail($id);
+		$this->ensureEstado($convenio, ['en_vigor']);
 		$firmadoCentro = $convenio->latestValidDocument('firmado_centro');
+		abort_unless($firmadoCentro, 404);
 
 		return view('convenios.actions.descargar_firmado', compact('convenio', 'firmadoCentro'));
 	}
@@ -501,11 +593,33 @@ class Convenios extends Controller
 			->where('convenio_id', $convenio->id)
 			->findOrFail($documentoId);
 
+		abort_unless($this->canDownloadDocument(Auth::user(), $convenio, $documento), 403);
 		abort_unless(Storage::disk('local')->exists($documento->ruta_archivo), 404);
 
 		$filename = 'convenio-'.$convenio->id.'-'.$documento->tipo.'.pdf';
 
-		return Storage::disk('local')->download($documento->ruta_archivo, $filename);
+		return response()->download(Storage::disk('local')->path($documento->ruta_archivo), $filename);
+	}
+
+	private function ensureEstado(Convenio $convenio, array $estados): void
+	{
+		abort_unless(in_array($convenio->estado, $estados, true), 403);
+	}
+
+	private function canDownloadDocument($user, Convenio $convenio, DocumentoPdf $documento): bool
+	{
+		$role = $this->currentRoleName($user);
+
+		if ($role === 'administrador') {
+			return true;
+		}
+
+		return match ($documento->tipo) {
+			'provisional' => in_array($role, ['secretaria', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true),
+			'firmado_empresa' => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor'], true),
+			'firmado_centro' => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor', 'empresa externa'], true),
+			default => in_array($role, ['direccion', 'coordinador ffe', 'profesor tutor', 'secretaria', 'empresa externa'], true),
+		};
 	}
 
 	private function canCreateCompanies($user): bool
@@ -674,7 +788,7 @@ class Convenios extends Controller
 				'resp_ies_telefono' => $validated['tutor_telefono'] ?? null,
 				'resp_ies_email' => $validated['tutor_email'] ?? null,
 				'fecha_firma' => $validated['fecha_firma'] ?? null,
-				'estado' => ! empty($validated['fecha_firma']) ? 'en_vigor' : 'pendiente_secretaria',
+				'estado' => 'pendiente_secretaria',
 				'horario_practicas' => $horariosResumen,
 				'observaciones' => $validated['observaciones'] ?? null,
 			]);
@@ -847,7 +961,7 @@ class Convenios extends Controller
 	private function crearTareas(Convenio $convenio, $usuarios, string $tipo, string $descripcion): void
 	{
 		foreach ($usuarios as $usuario) {
-			TareaPendiente::updateOrCreate(
+			$tarea = TareaPendiente::updateOrCreate(
 				[
 					'convenio_id' => $convenio->id,
 					'usuario_id' => $usuario->id,
@@ -856,7 +970,25 @@ class Convenios extends Controller
 				],
 				['descripcion' => $descripcion]
 			);
+
+			if ($tarea->wasRecentlyCreated || $tarea->wasChanged('descripcion')) {
+				$this->enviarCorreoTareaPendiente($tarea);
+			}
 		}
+	}
+
+	private function enviarCorreoTareaPendiente(TareaPendiente $tarea): void
+	{
+		DB::afterCommit(function () use ($tarea): void {
+			$tarea->loadMissing(['usuario', 'convenio.empresa']);
+			$email = $tarea->usuario?->email;
+
+			if (! $email || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+				return;
+			}
+
+			app(ResendTareaPendienteMailer::class)->send($tarea);
+		});
 	}
 
 	private function completarTareas(Convenio $convenio, array $tipos, ?int $usuarioId = null): void

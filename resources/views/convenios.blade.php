@@ -101,6 +101,7 @@
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefono</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicacion</th>
+								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tutor asignado</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha firma</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
 								<th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Caduca</th>
@@ -118,6 +119,7 @@
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $convenio->empresa->email ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ $convenio->empresa->telefono1 ?? $convenio->empresa->telefono2 ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ trim(($convenio->empresa->municipio ?? '').' '.($convenio->empresa->provincia ?? '')) ?: '-' }}</td>
+									<td class="px-4 py-3 text-sm text-gray-700">{{ $convenio->profesor?->nombre ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">{{ optional($convenio->fecha_firma)->format('d/m/Y') ?? '-' }}</td>
 									<td class="px-4 py-3 text-sm text-gray-700">
 										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ \App\Models\Convenio::estadoBadgeClass($convenio->estado) }}">
@@ -136,7 +138,7 @@
 								</tr>
 							@empty
 								<tr>
-									<td colspan="12" class="px-4 py-8 text-center text-sm text-gray-500">
+									<td colspan="13" class="px-4 py-8 text-center text-sm text-gray-500">
 										No hay convenios para los filtros seleccionados.
 									</td>
 								</tr>

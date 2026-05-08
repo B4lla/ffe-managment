@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -59,6 +61,46 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->refresh()->email_verified_at);
+    }
+
+    public function test_profile_photo_url_can_be_updated(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile', [
+                'nombre' => $user->nombre,
+                'email' => $user->email,
+                'foto_url' => 'https://example.com/profile.jpg',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertSame('https://example.com/profile.jpg', $user->refresh()->foto_url);
+    }
+
+    public function test_profile_photo_file_can_be_uploaded(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile', [
+                'nombre' => $user->nombre,
+                'email' => $user->email,
+                'foto_archivo' => UploadedFile::fake()->image('avatar.jpg', 100, 100),
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertStringContainsString('/storage/profile-photos/', $user->refresh()->foto_url);
     }
 
     public function test_user_can_delete_their_account(): void

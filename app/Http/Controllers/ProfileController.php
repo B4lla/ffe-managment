@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -27,8 +28,16 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $currentEmailHash = $request->user()->email_hash;
+        $validated = $request->validated();
 
-        $request->user()->fill($request->validated());
+        if ($request->hasFile('foto_archivo')) {
+            $path = $request->file('foto_archivo')->store('profile-photos', 'public');
+            $validated['foto_url'] = Storage::disk('public')->url($path);
+        }
+
+        unset($validated['foto_archivo']);
+
+        $request->user()->fill($validated);
 
         if ($request->user()->email_hash !== $currentEmailHash) {
             $request->user()->email_verified_at = null;

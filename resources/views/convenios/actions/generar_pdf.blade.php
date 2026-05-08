@@ -29,19 +29,9 @@
                         <input name="pdf" type="file" accept="application/pdf,.pdf" required class="mt-1 block w-full text-sm">
                     </div>
 
-                    <label class="flex items-start gap-3 text-sm text-gray-700">
-                        <input name="activar_directamente" value="1" type="checkbox" class="mt-1 rounded border-gray-300">
-                        <span>Este PDF ya esta firmado por el centro y deja el convenio en vigor.</span>
-                    </label>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Fecha de firma si queda en vigor</label>
-                        <input name="fecha_firma" type="date" value="{{ old('fecha_firma', optional($convenio->fecha_firma)->format('Y-m-d')) }}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                    </div>
-
                     <div class="flex justify-end gap-3">
                         <a href="{{ route('convenios.show', $convenio->id) }}" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">Cancelar</a>
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Subir PDF</button>
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Subir PDF inicial y enviar a empresa</button>
                     </div>
                 </form>
             </div>

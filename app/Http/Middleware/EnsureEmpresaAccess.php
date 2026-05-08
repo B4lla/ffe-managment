@@ -60,7 +60,11 @@ class EnsureEmpresaAccess
             return false;
         }
 
-        return (int) $empresa === (int) $user->empresa_id;
+        $empresaId = is_object($empresa) && isset($empresa->id)
+            ? (int) $empresa->id
+            : (int) $empresa;
+
+        return $empresaId === (int) $user->empresa_id;
     }
 
     private function roleName($user): string

@@ -51,9 +51,9 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Nombre Tutor</label>
+                                <label class="block text-sm font-medium text-gray-700">Nombre del tutor</label>
                                 <select id="tutor_select" name="tutor_id" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                    <option value="">Selecciona tutor</option>
+                                    <option value="">Selecciona primero un departamento</option>
                                 </select>
                             </div>
 
@@ -222,7 +222,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Estado inicial</label>
-                                <input type="text" value="Pendiente de secretaria (o en vigor si indicas fecha de firma)" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
+                                <input type="text" value="Pendiente de secretaria hasta subir el PDF inicial" disabled class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-50">
                             </div>
                         </div>
                     </div>
@@ -276,9 +276,17 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Horario (múltiple)</label>
                     <select name="tutores[][horarios][]" multiple class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                        @for($i = 1; $i <= 16; $i++)
-                            <option value="{{ $i }}">Horario {{ $i }}</option>
-                        @endfor
+                        @php
+                            $horas = [];
+                            for ($h = 0; $h < 24; $h++) {
+                                $inicio = str_pad($h, 2, '0', STR_PAD_LEFT) . ':00';
+                                $fin = str_pad($h+1, 2, '0', STR_PAD_LEFT) . ':00';
+                                $horas[] = $inicio . '-' . $fin;
+                            }
+                        @endphp
+                        @foreach($horas as $i => $rango)
+                            <option value="{{ $i+1 }}">{{ $rango }}</option>
+                        @endforeach
                     </select>
                 </div>
             </div>
@@ -290,6 +298,7 @@
 
     <script>
         const tutoresByDept = <?php echo json_encode($tutoresByDept ?? []); ?>;
+        const selectedTutor = String(@json((string) old('tutor_id', '')));
 
         document.addEventListener('DOMContentLoaded', function () {
             const empresaSelect = document.getElementById('empresa_select');
@@ -306,27 +315,42 @@
 
             if (empresaSelect) {
                 empresaSelect.addEventListener('change', toggleEmpresaFields);
-                // init state
                 toggleEmpresaFields();
             }
             const depSelect = document.getElementById('departamento_select');
             const tutorSelect = document.getElementById('tutor_select');
 
-            depSelect?.addEventListener('change', function () {
-                const val = this.value;
-                tutorSelect.innerHTML = '<option value="">Selecciona tutor</option>';
-                if (val && tutoresByDept[val]) {
-                    tutoresByDept[val].forEach(t => {
-                        const opt = document.createElement('option');
-                        opt.value = t.id;
-                        opt.textContent = t.name;
-                        tutorSelect.appendChild(opt);
-                    });
-                    tutorSelect.disabled = false;
-                } else {
+            function loadTutorsForDepartment() {
+                const deptId = depSelect?.value || '';
+                const tutors = tutoresByDept[deptId] || [];
+
+                tutorSelect.innerHTML = '';
+
+                if (!deptId) {
+                    tutorSelect.appendChild(new Option('Selecciona primero un departamento', ''));
                     tutorSelect.disabled = true;
+                    return;
                 }
-            });
+
+                if (tutors.length === 0) {
+                    tutorSelect.appendChild(new Option('No hay tutores en este departamento', ''));
+                    tutorSelect.disabled = true;
+                    return;
+                }
+
+                tutorSelect.appendChild(new Option('Selecciona tutor', ''));
+                tutors.forEach(t => {
+                    const opt = new Option(t.name, t.id);
+                    if (String(t.id) === selectedTutor) {
+                        opt.selected = true;
+                    }
+                    tutorSelect.appendChild(opt);
+                });
+                tutorSelect.disabled = false;
+            }
+
+            depSelect?.addEventListener('change', loadTutorsForDepartment);
+            loadTutorsForDepartment();
 
             const addDireccion = document.getElementById('add_direccion');
             const direccionesContainer = document.getElementById('direcciones_container');

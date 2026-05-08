@@ -93,6 +93,7 @@
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Departamento</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Alta</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
@@ -111,6 +112,18 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-700">{{ optional($usuario->created_at)->format('d/m/Y') ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        @if($puede_gestionar)
+                                            <a href="{{ route('usuarios.edit', $usuario->id) }}" class="text-indigo-600 hover:underline mr-3">Editar</a>
+                                            <form method="POST" action="{{ route('usuarios.destroy', $usuario->id) }}" class="inline" onsubmit="return confirm('Eliminar usuario? Esto es irreversible.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:underline">Eliminar</button>
+                                            </form>
+                                        @else
+                                            <span class="text-gray-500">Sin acciones</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>

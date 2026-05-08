@@ -37,6 +37,16 @@ Route::put('/convenios/{id}/datos', [Convenios::class, 'updateInitial'])
     ->middleware(['auth', 'verified', 'convenio.access:editInitial'])
     ->name('convenios.datos.update');
 
+Route::get('/convenios/{id}/editar-tutor', [Convenios::class, 'editTutorForm'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:editInitial'])
+    ->name('convenios.editar_tutor');
+
+Route::put('/convenios/{id}/editar-tutor', [Convenios::class, 'updateTutor'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified', 'convenio.access:editInitial'])
+    ->name('convenios.editar_tutor.update');
+
 Route::get('/convenios/{id}/generar-pdf', [Convenios::class, 'generatePdfForm'])
     ->whereNumber('id')
     ->middleware(['auth', 'verified', 'convenio.access:generatePdf'])

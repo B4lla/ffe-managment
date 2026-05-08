@@ -37,6 +37,8 @@ class ProfileUpdateRequest extends FormRequest
                     }
                 },
             ],
+            'foto_url' => ['nullable', 'url', 'max:2048'],
+            'foto_archivo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
     }
 }

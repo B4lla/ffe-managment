@@ -46,9 +46,9 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Tutor centro</label>
+                            <label class="block text-sm font-medium text-gray-700">Nombre del tutor</label>
                             <select id="tutor_select" name="tutor_id" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                                <option value="">Selecciona tutor</option>
+                                <option value="">Selecciona primero un departamento</option>
                             </select>
                         </div>
                         <div>
@@ -152,15 +152,32 @@
             const tutorSelect = document.getElementById('tutor_select');
 
             function loadTutors() {
-                const deptId = depSelect.value;
-                tutorSelect.innerHTML = '<option value="">Selecciona tutor</option>';
-                (tutoresByDept[deptId] || []).forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.textContent = t.name;
-                    if (String(t.id) === selectedTutor) opt.selected = true;
+                const deptId = depSelect?.value || '';
+                const tutors = tutoresByDept[deptId] || [];
+
+                tutorSelect.innerHTML = '';
+
+                if (!deptId) {
+                    tutorSelect.appendChild(new Option('Selecciona primero un departamento', ''));
+                    tutorSelect.disabled = true;
+                    return;
+                }
+
+                if (tutors.length === 0) {
+                    tutorSelect.appendChild(new Option('No hay tutores en este departamento', ''));
+                    tutorSelect.disabled = true;
+                    return;
+                }
+
+                tutorSelect.appendChild(new Option('Selecciona tutor', ''));
+                tutors.forEach(t => {
+                    const opt = new Option(t.name, t.id);
+                    if (String(t.id) === selectedTutor) {
+                        opt.selected = true;
+                    }
                     tutorSelect.appendChild(opt);
                 });
+                tutorSelect.disabled = false;
             }
 
             depSelect?.addEventListener('change', loadTutors);

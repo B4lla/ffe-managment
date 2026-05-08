@@ -13,14 +13,25 @@
                 <!-- Navigation Links -->
                 @php
                     $navRole = '';
+                    $pendingTasksCount = 0;
                     if (Auth::check()) {
                         $navRole = strtolower(trim((string) optional(Auth::user()->rol)->nombre));
+                        $pendingTasksCount = \App\Models\TareaPendiente::query()
+                            ->where('usuario_id', Auth::id())
+                            ->where('completada', false)
+                            ->count();
                     }
                 @endphp
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     @if ($navRole === 'empresa externa')
+                        <x-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
+                            {{ __('Empresa') }}
+                        </x-nav-link>
                         <x-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
                             {{ __('Convenios') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                            {{ __('Tareas pendientes') }}@if($pendingTasksCount > 0) ({{ $pendingTasksCount }})@endif
                         </x-nav-link>
                     @else
                         <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
@@ -45,7 +56,7 @@
                             {{ __('Informes') }}
                         </x-nav-link>
                         <x-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
-                            {{ __('Tareas pendientes') }}
+                            {{ __('Tareas pendientes') }}@if($pendingTasksCount > 0) ({{ $pendingTasksCount }})@endif
                         </x-nav-link>
                     @endif
                 </div>
@@ -101,14 +112,25 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         @php
             $navRole = '';
+            $pendingTasksCount = 0;
             if (Auth::check()) {
                 $navRole = strtolower(trim((string) optional(Auth::user()->rol)->nombre));
+                $pendingTasksCount = \App\Models\TareaPendiente::query()
+                    ->where('usuario_id', Auth::id())
+                    ->where('completada', false)
+                    ->count();
             }
         @endphp
         <div class="pt-2 pb-3 space-y-1">
             @if ($navRole === 'empresa externa')
+                <x-responsive-nav-link :href="route('empresas.index')" :active="request()->routeIs('empresas.*')">
+                    {{ __('Empresa') }}
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('convenios.index')" :active="request()->routeIs('convenios.*')">
                     {{ __('Convenios') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
+                    {{ __('Tareas pendientes') }}@if($pendingTasksCount > 0) ({{ $pendingTasksCount }})@endif
                 </x-responsive-nav-link>
             @else
                 <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
@@ -133,7 +155,7 @@
                     {{ __('Informes') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('tareas_pendientes.index')" :active="request()->routeIs('tareas_pendientes.*')">
-                    {{ __('Tareas pendientes') }}
+                    {{ __('Tareas pendientes') }}@if($pendingTasksCount > 0) ({{ $pendingTasksCount }})@endif
                 </x-responsive-nav-link>
             @endif
         </div>

@@ -2,6 +2,20 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    <div class="mb-6 space-y-3">
+        @foreach(array_filter(array_map('trim', explode(',', (string) config('services.oauth_providers', 'google')))) as $provider)
+            <a href="{{ route('social.redirect', $provider) }}" class="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                Entrar con {{ ucfirst($provider) }}
+            </a>
+        @endforeach
+    </div>
+
+    <div class="mb-6 flex items-center gap-3">
+        <div class="h-px flex-1 bg-gray-200"></div>
+        <span class="text-xs uppercase text-gray-500">o email</span>
+        <div class="h-px flex-1 bg-gray-200"></div>
+    </div>
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 

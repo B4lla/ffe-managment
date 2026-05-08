@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class Usuarios extends Controller
 {
@@ -132,6 +133,72 @@ class Usuarios extends Controller
 		return redirect()
 			->route($redirectRoute)
 			->with('status', 'Usuario creado correctamente.');
+	}
+
+	public function edit(int $id)
+	{
+		$currentUser = Auth::user();
+		abort_unless($this->canManageUsers($currentUser), 403);
+
+		$user = User::query()->findOrFail($id);
+
+		$roles = Rol::query()->orderBy('nombre')->get(['id', 'nombre']);
+		$departamentos = Departamento::query()->orderBy('nombre')->get(['id', 'nombre']);
+		$empresas = Empresa::query()->orderBy('nombre_razon_social')->get(['id', 'nombre_razon_social']);
+
+		return view('usuarios.edit', compact('user', 'roles', 'departamentos', 'empresas'));
+	}
+
+	public function update(Request $request, int $id)
+	{
+		$currentUser = Auth::user();
+		abort_unless($this->canManageUsers($currentUser), 403);
+
+		$user = User::query()->findOrFail($id);
+
+		$allowedRoleIds = Rol::query()->orderBy('nombre')->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+		$validated = $request->validate([
+			'nombre' => ['required', 'string', 'max:200'],
+			'email' => ['required', 'string', 'email', 'max:150'],
+			'dni_cif' => ['nullable', 'string', 'max:20'],
+			'password' => ['nullable', 'confirmed', 'min:8'],
+			'departamento_id' => ['nullable', 'integer', 'exists:departamentos,id'],
+			'rol_id' => ['required', 'integer', 'exists:roles,id', 'in:'.implode(',', $allowedRoleIds)],
+			'empresa_id' => ['nullable', 'integer', 'exists:empresas,id'],
+			'activo' => ['nullable', 'boolean'],
+		]);
+
+		DB::transaction(function () use ($user, $validated, $request) {
+			$user->nombre = $validated['nombre'];
+			if ($user->email !== $validated['email']) {
+				$user->email = $validated['email'];
+				$user->email_hash = hash('sha256', strtolower(trim((string) $validated['email'])));
+			}
+			$user->dni_cif = $validated['dni_cif'] ?? null;
+			if (! empty($validated['password'])) {
+				$user->password = Hash::make($validated['password']);
+			}
+			$empresaExternaRoleId = (int) Rol::query()->where('nombre', 'Empresa externa')->value('id');
+			$user->departamento_id = (int) $validated['rol_id'] === $empresaExternaRoleId ? null : ($validated['departamento_id'] ?? null);
+			$user->empresa_id = (int) $validated['rol_id'] === $empresaExternaRoleId ? ($validated['empresa_id'] ?? null) : null;
+			$user->rol_id = $validated['rol_id'];
+			$user->activo = request()->boolean('activo', false);
+			$user->save();
+		});
+
+		return redirect()->route('usuarios.index')->with('status', 'Usuario actualizado correctamente.');
+	}
+
+	public function destroy(int $id)
+	{
+		$currentUser = Auth::user();
+		abort_unless($this->canManageUsers($currentUser), 403);
+
+		$user = User::query()->findOrFail($id);
+		$user->delete();
+
+		return redirect()->route('usuarios.index')->with('status', 'Usuario eliminado.');
 	}
 
 	private function canManageUsers($user): bool

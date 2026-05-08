@@ -35,4 +35,27 @@ return [
         ],
     ],
 
+    'oauth_providers' => env('OAUTH_PROVIDERS', 'google'),
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/login/google/callback'),
+        'scopes' => ['openid', 'profile', 'email'],
+    ],
+
+    'github' => [
+        'client_id' => env('GITHUB_CLIENT_ID'),
+        'client_secret' => env('GITHUB_CLIENT_SECRET'),
+        'redirect' => env('GITHUB_REDIRECT_URI', env('APP_URL').'/login/github/callback'),
+        'scopes' => ['read:user', 'user:email'],
+    ],
+
+    'gitlab' => [
+        'client_id' => env('GITLAB_CLIENT_ID'),
+        'client_secret' => env('GITLAB_CLIENT_SECRET'),
+        'redirect' => env('GITLAB_REDIRECT_URI', env('APP_URL').'/login/gitlab/callback'),
+        'scopes' => ['read_user'],
+    ],
+
 ];
